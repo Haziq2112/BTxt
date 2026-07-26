@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>BText Profile</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+    --void:#0A0E0F;
+    --panel:#14181A;
+    --panel-2:#1B2023;
+    --signal:#00E676;
+    --signal-dim:#00E67633;
+    --paper:#F5F7F6;
+    --slate:#8A9296;
+    --coral:#FF5D5D;
+}
+
+*{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+    margin:0;
+    padding:0;
+}
+
+body{
+    background:var(--void);
+    font-family:'Inter',sans-serif;
+    color:var(--paper);
+    min-height:100dvh;
+    padding-bottom:30px;
+}
+
+a{
+    text-decoration:none;
+}
+
+.header{
+    padding:calc(env(safe-area-inset-top) + 18px) 20px 16px;
+    border-bottom:1px solid #1D2225;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:20px;
+}
+
+.profile{
+    text-align:center;
+    padding:36px 24px;
+    border-bottom:1px solid #1D2225;
+}
+
+.avatar{
+    width:110px;
+    height:110px;
+    border-radius:50%;
+    margin:auto;
+    overflow:hidden;
+    background:var(--panel-2);
+    border:2px solid var(--signal);
+    cursor:pointer;
+}
+
+.avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+}
+
+.name{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:22px;
+    font-weight:700;
+    margin-top:16px;
+}
+
+.bio{
+    color:var(--slate);
+    margin-top:6px;
+    font-size:14px;
+}
+
+.flash{
+    margin:16px 20px 0;
+    padding:12px 14px;
+    background:var(--panel-2);
+    border-left:3px solid var(--signal);
+    border-radius:8px;
+    font-size:14px;
+}
+
+.card{
+    background:var(--panel);
+    margin:20px 16px;
+    border-radius:16px;
+    overflow:hidden;
+    border:1px solid #1D2225;
+}
+
+.row{
+    padding:16px;
+    border-bottom:1px solid #1D2225;
+}
+
+.row:last-child{
+    border-bottom:none;
+}
+
+.title{
+    font-size:12px;
+    color:var(--slate);
+    letter-spacing:.03em;
+}
+
+.value{
+    margin-top:5px;
+    font-size:16px;
+}
+
+.button{
+    display:block;
+    margin:14px 16px;
+    padding:16px;
+    border-radius:14px;
+    background:var(--signal);
+    color:var(--void);
+    text-align:center;
+    font-weight:600;
+    font-size:16px;
+}
+
+.button:active{
+    opacity:.85;
+}
+
+.delete{
+    display:block;
+    margin:14px 16px;
+    padding:16px;
+    border-radius:14px;
+    background:transparent;
+    border:1.5px solid #3A1414;
+    color:var(--coral);
+    text-align:center;
+    font-weight:600;
+    font-size:16px;
+}
+
+.back{
+    display:block;
+    margin:14px 16px 4px;
+    padding:16px;
+    border-radius:14px;
+    background:var(--panel);
+    border:1.5px solid #262B2E;
+    color:var(--paper);
+    text-align:center;
+    font-weight:600;
+    font-size:16px;
+}
+
+/* ---------- POPUP SHARED ---------- */
+
+.popup-bg{
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,.65);
+    backdrop-filter:blur(3px);
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+}
+
+.popup-card{
+    width:320px;
+    max-width:88vw;
+    background:var(--panel);
+    border:1px solid #262B2E;
+    border-radius:20px;
+    padding:24px;
+}
+
+.popup-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:19px;
+    font-weight:700;
+    text-align:center;
+    margin:0 0 20px;
+}
+
+.popup-btn{
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:12px;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    margin-bottom:10px;
+    font-family:'Inter',sans-serif;
+}
+
+.popup-btn.primary{
+    background:var(--signal);
+    color:var(--void);
+}
+
+.popup-btn.danger{
+    background:var(--coral);
+    color:var(--void);
+}
+
+.popup-btn.neutral{
+    background:var(--panel-2);
+    color:var(--paper);
+    border:1px solid #262B2E;
+    margin-bottom:0;
+}
+
+.popup-input{
+    width:100%;
+    padding:14px 16px;
+    margin-bottom:14px;
+    border:1.5px solid #262B2E;
+    border-radius:12px;
+    background:var(--panel-2);
+    color:var(--paper);
+    font-size:16px;
+    font-family:'Inter',sans-serif;
+    outline:none;
+}
+
+.popup-input:focus{
+    border-color:var(--signal);
+}
+
+.popup-label{
+    font-size:13px;
+    color:var(--slate);
+    margin-bottom:6px;
+    display:block;
+}
+
+.popup-status{
+    font-size:13px;
+    color:var(--slate);
+    margin:-8px 0 14px 2px;
+}
+
+.popup-text{
+    color:var(--slate);
+    line-height:1.5;
+    text-align:center;
+    margin-bottom:24px;
+    font-size:15px;
+}
+
+.popup-cancel-link{
+    display:block;
+    text-align:center;
+    margin-top:16px;
+    color:var(--slate);
+    font-size:14px;
+    font-weight:600;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">← Profile</div>
+
+<div class="profile">
+
+<div
+class="avatar"
+onclick="openPictureMenu()">
+
+{% if profile_picture %}
+
+<img src="{{ profile_picture }}">
+
+{% else %}
+
+<img src="/static/profile_pictures/default.png">
+
+{% endif %}
+
+</div>
+
+<div class="name">
+{{ username }}
+</div>
+
+<div class="bio">
+{{ bio if bio else "No bio yet." }}
+</div>
+
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="flash">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="card">
+
+<div class="row">
+<div class="title">Username</div>
+<div class="value">{{ username }}</div>
+</div>
+
+<div class="row">
+<div class="title">Bio</div>
+<div class="value">{{ bio if bio else "No bio yet." }}</div>
+</div>
+
+<div class="row">
+<div class="title">Phone Number</div>
+<div class="value">Not Linked</div>
+</div>
+
+<div class="row">
+<div class="title">BText ID</div>
+<div class="value">{{ btext_id }}</div>
+</div>
+
+<div class="row">
+<div class="title">Joined</div>
+<div class="value">July 2026</div>
+</div>
+
+</div>
+
+<form
+id="pictureForm"
+action="/profile/picture"
+method="POST"
+enctype="multipart/form-data">
+
+<input
+id="pictureInput"
+type="file"
+name="picture"
+accept="image/*"
+style="display:none;">
+
+</form>
+
+<a href="#" class="button" onclick="openEditProfile()">
+✏ Edit Profile
+</a>
+
+<a href="#" class="button" onclick="openPasswordPopup()">
+🔒 Change Password
+</a>
+
+<a href="#" class="delete" onclick="openDeletePopup()">
+🗑 Delete Account
+</a>
+
+<a href="/settings" class="back">
+← Back
+</a>
+
+<!-- Profile Picture Popup -->
+
+<div id="picturePopup" class="popup-bg">
+
+<div class="popup-card">
+
+<div class="popup-title">Profile Picture</div>
+
+<button
+onclick="document.getElementById('pictureInput').click();"
+class="popup-btn primary">
+🖼 Choose from Gallery
+</button>
+
+<button
+onclick="removePicture();"
+class="popup-btn danger">
+🗑 Remove Picture
+</button>
+
+<button
+onclick="closePictureMenu();"
+class="popup-btn neutral">
+Cancel
+</button>
+
+</div>
+
+</div>
+
+<!-- Edit Profile Popup -->
+
+<div id="editProfilePopup" class="popup-bg">
+
+<div class="popup-card">
+
+<div class="popup-title">Edit Profile</div>
+
+<form action="/profile/update" method="POST">
+
+<span class="popup-label">Username</span>
+
+<input
+id="usernameInput"
+class="popup-input"
+type="text"
+name="username"
+value="{{ username }}"
+>
+
+<div id="usernameStatus" class="popup-status"></div>
+
+<span class="popup-label">Bio</span>
+
+<textarea
+name="bio"
+class="popup-input"
+style="height:90px;resize:none;"
+>{{ bio }}</textarea>
+
+<div style="height:6px;"></div>
+
+<button
+id="saveProfileBtn"
+type="submit"
+class="popup-btn primary">
+Save
+</button>
+
+<button
+type="button"
+onclick="closeEditProfile();"
+class="popup-btn neutral">
+Cancel
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+<!-- Delete Account Popup -->
+
+<div id="deletePopup" class="popup-bg">
+
+<div class="popup-card">
+
+<div class="popup-text" style="margin-bottom:20px;">
+Delete your account? This cannot be undone.
+</div>
+
+<button
+onclick="confirmDeleteAccount()"
+class="popup-btn danger">
+Yes, Delete
+</button>
+
+<button
+onclick="closeDeletePopup()"
+class="popup-btn neutral">
+No, Cancel
+</button>
+
+</div>
+
+</div>
+
+<!-- Change Password Popup -->
+
+<div id="passwordPopup" class="popup-bg">
+
+<div class="popup-card">
+
+<div class="popup-title">🔒 Change Password</div>
+
+<form action="/change_password" method="POST">
+
+<input
+type="password"
+name="current_password"
+placeholder="Current Password"
+required
+class="popup-input"
+>
+
+<input
+type="password"
+name="new_password"
+placeholder="New Password"
+required
+class="popup-input"
+>
+
+<input
+type="password"
+name="confirm_password"
+placeholder="Confirm New Password"
+required
+class="popup-input"
+>
+
+<button type="submit" class="popup-btn primary">
+Change Password
+</button>
+
+</form>
+
+<a href="#" onclick="closePasswordPopup(); return false;" class="popup-cancel-link">
+← Cancel
+</a>
+
+</div>
+
+</div>
+
+<script>
+
+function openPictureMenu(){
+    document.getElementById("picturePopup").style.display = "flex";
+}
+
+function closePictureMenu(){
+    document.getElementById("picturePopup").style.display = "none";
+}
+
+function openEditProfile(){
+    document.getElementById("editProfilePopup").style.display = "flex";
+    document.getElementById("usernameInput").dispatchEvent(new Event("input"));
+}
+
+function closeEditProfile(){
+    document.getElementById("editProfilePopup").style.display = "none";
+}
+
+function removePicture(){
+    if(confirm("Remove your profile picture?")){
+        window.location.href = "/profile/remove_picture";
+    }
+}
+
+function openDeletePopup(){
+    document.getElementById("deletePopup").style.display = "flex";
+}
+
+function closeDeletePopup(){
+    document.getElementById("deletePopup").style.display = "none";
+}
+
+function confirmDeleteAccount(){
+
+    fetch("/profile/delete_account", { method: "POST" })
+        .then(() => { window.location.href = "/login"; });
+
+}
+
+function openPasswordPopup(){
+    document.getElementById("passwordPopup").style.display = "flex";
+}
+
+function closePasswordPopup(){
+    document.getElementById("passwordPopup").style.display = "none";
+}
+
+document
+    .getElementById("pictureInput")
+    .addEventListener("change", function(){
+        if(this.files.length){
+            document.getElementById("pictureForm").submit();
+        }
+    });
+
+window.addEventListener("DOMContentLoaded", () => {
+
+    const usernameInput = document.getElementById("usernameInput");
+    const usernameStatus = document.getElementById("usernameStatus");
+    const saveBtn = document.getElementById("saveProfileBtn");
+
+    let usernameTimer;
+
+    usernameInput.addEventListener("input", function(){
+
+        clearTimeout(usernameTimer);
+
+        const name = this.value.trim();
+
+        if(name.length < 3){
+            usernameStatus.innerHTML = "Username too short";
+            usernameStatus.style.color = "#FF5D5D";
+            saveBtn.disabled = true;
+            saveBtn.style.opacity = ".5";
+            return;
+        }
+
+        usernameTimer = setTimeout(async () => {
+
+            const response = await fetch(
+                "/profile/check_username?username=" + encodeURIComponent(name)
+            );
+
+            const data = await response.json();
+
+            if(data.available){
+                usernameStatus.innerHTML = "✓ Username available";
+                usernameStatus.style.color = "#00E676";
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = "1";
+            } else {
+                usernameStatus.innerHTML = "✗ Username already exists";
+                usernameStatus.style.color = "#FF5D5D";
+                saveBtn.disabled = true;
+                saveBtn.style.opacity = ".5";
+            }
+
+        }, 300);
+
+    });
+
+});
+
+</script>
+
+</body>
+</html>

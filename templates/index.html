@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width,
+initial-scale=1,
+maximum-scale=1,
+user-scalable=no">
+
+<meta http-equiv="Cache-Control"
+content="no-cache, no-store, must-revalidate">
+
+<meta http-equiv="Pragma"
+content="no-cache">
+
+<meta http-equiv="Expires"
+content="0">
+
+<title>BText</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+    --void:#0A0E0F;
+    --panel:#14181A;
+    --panel-2:#1B2023;
+    --signal:#00E676;
+    --signal-dim:#00E67633;
+    --paper:#F5F7F6;
+    --slate:#8A9296;
+    --coral:#FF5D5D;
+    --me-bubble:#123B2B;
+    --other-bubble:#1B2023;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Inter',sans-serif;
+    -webkit-tap-highlight-color:transparent;
+}
+
+body{
+    background:var(--void);
+    color:var(--paper);
+    font-size:16px;
+    overflow:hidden;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.header{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    height:calc(68px + env(safe-area-inset-top));
+    padding-top:env(safe-area-inset-top);
+    background:var(--void);
+    display:flex;
+    align-items:center;
+    padding-left:12px;
+    padding-right:12px;
+    border-bottom:1px solid #1D2225;
+    z-index:1000;
+}
+
+.back{
+    text-decoration:none;
+    color:var(--paper);
+    font-size:24px;
+    margin-right:12px;
+    width:36px;
+    height:36px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.avatar{
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    overflow:hidden;
+    background:var(--panel-2);
+    border:1.5px solid var(--signal);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+}
+
+.avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.user-info{
+    margin-left:12px;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+}
+
+.username{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:17px;
+    font-weight:700;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.status{
+    margin-top:2px;
+    font-size:12px;
+    color:var(--slate);
+}
+
+/* =========================
+CHAT AREA
+========================= */
+
+#chat-box{
+    position:fixed;
+    top:calc(68px + env(safe-area-inset-top));
+    bottom:92px;
+    left:0;
+    right:0;
+    overflow-y:auto;
+    padding:16px 14px;
+}
+
+/* =========================
+MESSAGE BUBBLES
+========================= */
+
+.bubble{
+    max-width:76%;
+    padding:11px 15px;
+    margin:8px 0;
+    border-radius:18px;
+    font-size:15.5px;
+    line-height:1.45;
+    word-wrap:break-word;
+    overflow-wrap:break-word;
+    animation:fadeIn .18s ease;
+}
+
+.me{
+    margin-left:auto;
+    background:var(--me-bubble);
+    border-bottom-right-radius:4px;
+}
+
+.other{
+    margin-right:auto;
+    background:var(--other-bubble);
+    border-bottom-left-radius:4px;
+}
+
+@keyframes fadeIn{
+    from{ opacity:0; transform:translateY(8px); }
+    to{ opacity:1; transform:translateY(0); }
+}
+
+.reply-box{
+    background:rgba(255,255,255,.06);
+    border-left:3px solid var(--signal);
+    padding:8px 10px;
+    border-radius:10px;
+    margin-bottom:8px;
+    font-size:13px;
+}
+
+.msg-time{
+    margin-top:5px;
+    font-size:11px;
+    opacity:.6;
+    text-align:right;
+}
+
+/* =========================
+INPUT BAR
+========================= */
+
+#chat-form{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:calc(14px + env(safe-area-inset-bottom));
+    padding:0 12px;
+}
+
+#replyPreview{
+    display:none;
+    background:var(--panel);
+    border:1px solid #262B2E;
+    padding:10px 12px;
+    border-radius:14px;
+    margin-bottom:8px;
+}
+
+#replyTitle{
+    font-weight:600;
+    color:var(--signal);
+    margin-bottom:3px;
+    font-size:13px;
+}
+
+#replyText{
+    font-size:14px;
+    color:var(--slate);
+}
+
+/* =========================
+MESSAGE INPUT
+========================= */
+
+#msg-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.attach-btn{
+    width:46px;
+    height:46px;
+    border-radius:50%;
+    border:none;
+    background:var(--panel);
+    border:1px solid #262B2E;
+    color:var(--paper);
+    font-size:22px;
+    cursor:pointer;
+    flex-shrink:0;
+}
+
+#message{
+    flex:1;
+    height:46px;
+    max-height:120px;
+    padding:12px 18px;
+    border:1.5px solid #262B2E;
+    outline:none;
+    resize:none;
+    border-radius:23px;
+    background:var(--panel);
+    color:var(--paper);
+    font-size:16px;
+}
+
+#message:focus{
+    border-color:var(--signal);
+}
+
+#message::placeholder{
+    color:var(--slate);
+}
+
+.send-btn{
+    width:48px;
+    height:48px;
+    border:none;
+    border-radius:50%;
+    background:var(--signal);
+    color:var(--void);
+    font-size:19px;
+    cursor:pointer;
+    flex-shrink:0;
+}
+
+.send-btn:active{
+    opacity:.85;
+}
+
+/* =========================
+SCROLL BUTTON
+========================= */
+
+#scrollBtn{
+    position:fixed;
+    right:16px;
+    bottom:100px;
+    width:44px;
+    height:44px;
+    border:none;
+    border-radius:50%;
+    background:var(--panel);
+    border:1px solid #262B2E;
+    color:var(--paper);
+    font-size:19px;
+    display:none;
+    cursor:pointer;
+    box-shadow:0 6px 20px rgba(0,0,0,.4);
+}
+
+/* =========================
+LONG PRESS MENU
+========================= */
+
+#msgMenu{
+    position:fixed;
+    display:none;
+    flex-direction:column;
+    background:var(--panel);
+    border:1px solid #262B2E;
+    border-radius:16px;
+    padding:6px;
+    min-width:180px;
+    box-shadow:0 12px 30px rgba(0,0,0,.5);
+    z-index:9999;
+}
+
+#msgMenu button{
+    background:none;
+    border:none;
+    color:var(--paper);
+    padding:13px 12px;
+    font-size:15px;
+    text-align:left;
+    cursor:pointer;
+    border-radius:10px;
+    font-family:'Inter',sans-serif;
+}
+
+#msgMenu button:active{
+    background:var(--panel-2);
+}
+
+#msgMenu button:last-child{
+    color:var(--coral);
+}
+
+/* =========================
+EDIT MODAL
+========================= */
+
+#editModal{
+    display:none;
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    background:var(--panel);
+    padding:20px 20px calc(20px + env(safe-area-inset-bottom));
+    border-top-left-radius:22px;
+    border-top-right-radius:22px;
+    border-top:1px solid #262B2E;
+    z-index:10000;
+}
+
+#editModal h3{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:17px;
+}
+
+#editInput{
+    width:100%;
+    height:90px;
+    background:var(--panel-2);
+    border:1.5px solid #262B2E;
+    outline:none;
+    resize:none;
+    border-radius:14px;
+    padding:12px;
+    color:var(--paper);
+    font-size:16px;
+    margin-top:12px;
+    font-family:'Inter',sans-serif;
+}
+
+#editInput:focus{
+    border-color:var(--signal);
+}
+
+.modal-buttons{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:15px;
+}
+
+.modal-buttons button{
+    padding:12px 20px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-size:15px;
+    font-weight:600;
+    font-family:'Inter',sans-serif;
+}
+
+.cancel-btn{
+    background:var(--panel-2);
+    color:var(--paper);
+    border:1px solid #262B2E;
+}
+
+.save-btn{
+    background:var(--signal);
+    color:var(--void);
+}
+
+::-webkit-scrollbar{
+    width:4px;
+}
+
+::-webkit-scrollbar-thumb{
+    background:#2A2F32;
+    border-radius:20px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+<a href="/chats" class="back">←</a>
+
+<div class="avatar">
+
+{% if profile_picture %}
+
+<img src="{{ profile_picture }}">
+
+{% else %}
+
+<img src="/static/profile_pictures/default.png">
+
+{% endif %}
+
+</div>
+
+<div class="user-info">
+
+<div class="username">
+
+{{ chatwith }}
+
+</div>
+
+<div class="status">
+
+{% if is_online(chatwith) %}
+🟢 Online
+{% else %}
+🔴 Offline
+{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+<div id="chat-box">
+</div>
+
+<button id="scrollBtn" >
+
+↓
+
+</button>
+
+<form id="chat-form">
+
+<div id="replyPreview">
+
+<div id="replyTitle"></div>
+
+<div id="replyText"></div>
+
+<button
+type="button"
+onclick="cancelReply()"
+style="float:right;background:none;border:none;color:#ff6666;font-size:18px;cursor:pointer;">
+✕
+</button>
+
+<div style="clear:both;"></div>
+
+</div>
+
+<div id="msg-row">
+
+<button
+type="button"
+class="attach-btn">
++
+</button>
+
+<textarea
+id="message"
+name="message"
+placeholder="Message"></textarea>
+
+<button
+type="submit"
+class="send-btn">
+➤
+</button>
+
+</div>
+
+</form>
+
+<div id="msgMenu">
+
+<button onclick="copyMessage()">
+📋 Copy
+</button>
+
+<button onclick="replyMessage()">
+↩ Reply
+</button>
+
+<button id="editBtn" onclick="editMessage()">
+✏ Edit
+</button>
+
+<button id="deleteBtn" onclick="deleteMessage()">
+🗑 Delete
+</button>
+
+<button id="deleteMeBtn" onclick="deleteForMe()">
+🚫 Delete For Me
+</button>
+
+</div>
+
+<div id="editModal">
+
+<h3>Edit Message</h3>
+
+<textarea id="editInput"></textarea>
+
+<div class="modal-buttons">
+
+<button
+type="button"
+class="cancel-btn"
+onclick="closeEditModal()">
+
+Cancel
+
+</button>
+
+<button
+type="button"
+class="save-btn"
+onclick="saveEditMessage()">
+
+Save
+
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+const usernameValue = "{{ username }}";
+const chatWithValue = "{{ chatwith }}";
+
+</script>
+
+<script src="/static/js/chat.js"></script>
+
+</body>
+</html>

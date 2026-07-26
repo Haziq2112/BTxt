@@ -1,0 +1,121 @@
+<div class="card" style="display:flex; justify-content:space-around; text-align:center; flex-wrap:wrap; gap:16px;">
+
+    <div>
+        <h3 style="margin:0 0 6px;font-size:14px;color:var(--slate);font-weight:600;">👥 Total Users</h3>
+        <p style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;">{{ total_users }}</p>
+    </div>
+
+    <div>
+        <h3 style="margin:0 0 6px;font-size:14px;color:var(--slate);font-weight:600;">⏸ Suspended</h3>
+        <p style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;">{{ suspended_users | length }}</p>
+    </div>
+
+    <div>
+        <h3 style="margin:0 0 6px;font-size:14px;color:var(--slate);font-weight:600;">🌐 Blocked IPs</h3>
+        <p style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;">{{ banned_ips | length }}</p>
+    </div>
+
+</div>
+
+<div class="card">
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:18px;margin:0 0 14px;">🚫 Blocked IPs</h2>
+
+    {% if banned_ips %}
+        {% for ip in banned_ips %}
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding:14px;
+                margin:8px 0;
+                background:var(--panel-2);
+                border-radius:12px;
+            ">
+                <span style="font-size:15px;">{{ ip }}</span>
+
+                <button class="btn blue" style="margin:0;"
+                   onclick="adminAction('/admin/unbanipdirect/{{ ip }}')">
+                    Unban
+                </button>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:var(--slate);margin:0;">No blocked IPs</p>
+    {% endif %}
+</div>
+
+<div class="card" style="text-align:center;">
+    <a href="/admin/deleted" class="btn blue" style="display:block;margin:0;padding:16px;font-size:16px;">
+        🗂 Deleted Accounts
+    </a>
+</div>
+
+<div class="card" style="text-align:center;font-size:15px;color:var(--slate);">
+    Total Users: <span style="color:var(--paper);font-weight:600;">{{ total_users }}</span>
+</div>
+
+<div style="text-align:center; margin:20px 16px;">
+    <input
+        type="text"
+        id="searchInput"
+        placeholder="Search username..."
+        onkeyup="searchUsers()"
+        style="
+            width:100%;
+            max-width:400px;
+            padding:16px;
+            border-radius:12px;
+            border:1.5px solid #262B2E;
+            background:var(--panel);
+            color:var(--paper);
+            font-size:16px;
+            outline:none;
+            font-family:'Inter',sans-serif;
+        "
+    />
+</div>
+
+{% for username in users %}
+<div class="card">
+
+    <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;margin:0 0 6px;">{{ username }}</h3>
+
+    <p style="color:var(--slate);font-size:14px;margin:0 0 14px;">🌐 IP: {{ user_ips.get(username, "Unknown") }}</p>
+
+    <div>
+
+    <button class="btn red"
+        onclick="showPopup('delete', '{{ username }}')">
+        🗑 Delete
+    </button>
+
+    {% if username in suspended_users %}
+        <button class="btn green"
+            onclick="showPopup('resume', '{{ username }}')">
+            ▶ Resume
+        </button>
+    {% else %}
+        <button class="btn orange"
+            onclick="showPopup('suspend', '{{ username }}')">
+            ⏸ Suspend
+        </button>
+    {% endif %}
+
+    {% set ip = user_ips.get(username) %}
+
+    {% if ip in banned_ips %}
+        <button class="btn blue"
+            onclick="showPopup('unbanip', '{{ username }}')">
+            🌐 Unban IP
+        </button>
+    {% else %}
+        <button class="btn brown"
+            onclick="showPopup('banip', '{{ username }}')">
+            🚫 Ban IP
+        </button>
+    {% endif %}
+
+    </div>
+
+</div>
+{% endfor %}

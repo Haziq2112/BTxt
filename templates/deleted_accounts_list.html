@@ -1,0 +1,48 @@
+{% if users %}
+
+{% for username, deleted_by in users %}
+
+<div class="card">
+
+    <h2>{{ username }}</h2>
+
+    <p style="
+    color:{% if deleted_by == 'user' %}var(--coral){% else %}var(--slate){% endif %};
+    font-weight:600;
+    font-size:14px;
+    margin:0 0 16px;
+    ">
+
+    {% if deleted_by == "user" %}
+        Deleted by User
+    {% else %}
+        Deleted by Admin
+    {% endif %}
+
+    </p>
+
+    <button
+    class="restore"
+    onclick="adminAction('/admin/restore/{{ username }}')">
+
+        Restore
+
+    </button>
+
+    <button
+    class="delete"
+    onclick="showDeletePopup('{{ username }}')">
+
+        Delete Forever
+
+    </button>
+
+</div>
+
+{% endfor %}
+
+{% else %}
+
+<div class="empty">No deleted accounts.</div>
+
+{% endif %}

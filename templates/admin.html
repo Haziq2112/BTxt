@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<title>BText Admin</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+    --void:#0A0E0F;
+    --panel:#14181A;
+    --panel-2:#1B2023;
+    --signal:#00E676;
+    --signal-dim:#00E67633;
+    --paper:#F5F7F6;
+    --slate:#8A9296;
+    --coral:#FF5D5D;
+    --amber:#FFB020;
+    --sky:#4C8DFF;
+    --clay:#C97A54;
+}
+
+*{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+body {
+    background:var(--void);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    margin:0;
+    padding:0 0 40px;
+}
+
+.page-header{
+    padding:calc(env(safe-area-inset-top) + 20px) 20px 18px;
+    border-bottom:1px solid #1D2225;
+    margin-bottom:6px;
+}
+
+.page-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:24px;
+    text-align:center;
+}
+
+.card {
+    background:var(--panel);
+    border:1px solid #1D2225;
+    padding:20px;
+    border-radius:18px;
+    margin:14px 16px;
+}
+
+button, a {
+    cursor:pointer;
+}
+
+.btn {
+    padding:12px 18px;
+    border-radius:12px;
+    text-decoration:none;
+    color:var(--void);
+    border:none;
+    margin:6px 6px 0 0;
+    font-size:15px;
+    font-weight:600;
+    font-family:'Inter',sans-serif;
+    display:inline-block;
+}
+
+.btn:active{
+    opacity:.85;
+}
+
+.red { background:var(--coral); }
+.orange { background:var(--amber); }
+.green { background:var(--signal); }
+.blue { background:var(--sky); color:var(--paper); }
+.brown { background:var(--clay); }
+
+/* ---------- POPUP ---------- */
+
+#popup {
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.7);
+    backdrop-filter:blur(3px);
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+}
+
+#popup > div {
+    background:var(--panel);
+    border:1px solid #262B2E;
+    padding:24px;
+    border-radius:18px;
+    text-align:center;
+    width:300px;
+    max-width:88vw;
+}
+
+#popupText{
+    font-size:16px;
+    line-height:1.4;
+    margin:0 0 20px;
+    color:var(--paper);
+}
+
+#popup .btn{
+    margin:0 6px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="page-header">
+    <div class="page-title">🛠 BText Admin Panel</div>
+</div>
+
+<div id="admin-content">
+    {% include "admin_content.html" %}
+</div>
+
+<!-- POPUP -->
+<div id="popup">
+
+    <div>
+
+        <p id="popupText"></p>
+
+        <button onclick="closePopup()" class="btn" style="background:var(--panel-2);color:var(--paper);border:1px solid #262B2E;">
+            No
+        </button>
+
+        <button onclick="confirmAction()" class="btn red">
+            Yes
+        </button>
+
+    </div>
+
+</div>
+
+<script src="/static/js/admin.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+<title>BText Chats</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+    --void:#0A0E0F;
+    --panel:#14181A;
+    --panel-2:#1B2023;
+    --signal:#00E676;
+    --signal-dim:#00E67633;
+    --paper:#F5F7F6;
+    --slate:#8A9296;
+    --coral:#FF5D5D;
+}
+
+*{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+}
+
+body{
+    background:var(--void);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+}
+
+a{
+    text-decoration:none;
+    color:inherit;
+}
+
+/* ---------- HEADER ---------- */
+
+.header{
+    position:sticky;
+    top:0;
+    z-index:50;
+    background:var(--void);
+    padding:calc(env(safe-area-inset-top) + 18px) 20px 14px;
+    border-bottom:1px solid #1D2225;
+}
+
+.header-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.wordmark{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:24px;
+    letter-spacing:-0.02em;
+}
+
+.wordmark span{
+    color:var(--signal);
+}
+
+.identity{
+    margin-top:2px;
+    font-size:13px;
+    color:var(--slate);
+}
+
+.identity b{
+    color:var(--paper);
+    font-weight:600;
+}
+
+.menu-btn{
+    background:var(--panel);
+    border:1px solid #262B2E;
+    width:42px;
+    height:42px;
+    border-radius:12px;
+    color:var(--paper);
+    font-size:20px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.menu-wrap{
+    position:relative;
+}
+
+#menu{
+    display:none;
+    position:absolute;
+    right:0;
+    top:52px;
+    background:var(--panel);
+    border:1px solid #262B2E;
+    border-radius:14px;
+    min-width:190px;
+    overflow:hidden;
+    box-shadow:0 12px 30px rgba(0,0,0,.5);
+    z-index:100;
+}
+
+#menu a{
+    display:block;
+    padding:14px 16px;
+    font-size:15px;
+    color:var(--paper);
+}
+
+#menu a:active{
+    background:var(--panel-2);
+}
+
+#menu a.danger{
+    color:var(--coral);
+}
+
+/* ---------- ADD USER ---------- */
+
+.add-row{
+    padding:16px 20px 4px;
+}
+
+.add-row form{
+    display:flex;
+    gap:10px;
+}
+
+.add-row input{
+    flex:1;
+    padding:14px 16px;
+    border-radius:12px;
+    border:1.5px solid #262B2E;
+    background:var(--panel);
+    color:var(--paper);
+    font-size:16px;
+    font-family:'Inter',sans-serif;
+    outline:none;
+}
+
+.add-row input:focus{
+    border-color:var(--signal);
+}
+
+.add-row button{
+    padding:0 20px;
+    border:none;
+    border-radius:12px;
+    background:var(--signal);
+    color:var(--void);
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+/* ---------- FLASH ---------- */
+
+.flash{
+    margin:10px 20px 0;
+    padding:12px 14px;
+    background:var(--panel-2);
+    border-left:3px solid var(--signal);
+    border-radius:8px;
+    font-size:14px;
+    color:var(--paper);
+}
+
+/* ---------- CHAT LIST ---------- */
+
+.list-title{
+    padding:22px 20px 8px;
+    font-size:13px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--slate);
+    font-weight:600;
+}
+
+.list{
+    flex:1;
+    padding-bottom:24px;
+}
+
+.row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:14px 20px;
+    border-bottom:1px solid #16191B;
+}
+
+.row:active{
+    background:var(--panel);
+}
+
+.avatar{
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    overflow:hidden;
+    flex-shrink:0;
+    background:var(--panel-2);
+}
+
+.avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+}
+
+.row-main{
+    flex:1;
+    min-width:0;
+}
+
+.row-name{
+    font-size:16px;
+    font-weight:600;
+}
+
+.row-preview{
+    margin-top:3px;
+    font-size:13px;
+    color:var(--slate);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.row-side{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-shrink:0;
+}
+
+.dot{
+    font-size:11px;
+    line-height:1;
+}
+
+.delete-btn{
+    background:none;
+    border:none;
+    color:var(--slate);
+    font-size:18px;
+    cursor:pointer;
+    padding:6px;
+}
+
+.delete-btn:active{
+    color:var(--coral);
+}
+
+.empty{
+    text-align:center;
+    padding:60px 24px;
+    color:var(--slate);
+    font-size:14px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+
+    <div class="header-row">
+
+        <div>
+            <div class="wordmark">B<span>Text</span></div>
+            <div class="identity">Signed in as <b>{{ username }}</b></div>
+        </div>
+
+        <div class="menu-wrap">
+
+            <button class="menu-btn" onclick="toggleMenu()">⋮</button>
+
+            <div id="menu">
+
+                <a href="/settings">⚙️ Settings</a>
+
+                {% if username.lower() == "hazii" %}
+                <a href="/admin">🛠 Admin</a>
+                {% endif %}
+
+                <a href="/logout" class="danger">🚪 Logout</a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="add-row">
+    <form method="POST" action="/add_user">
+        <input type="text" name="newuser" placeholder="Add a username">
+        <button type="submit">Add</button>
+    </form>
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for msg in messages %}
+            <div class="flash">{{ msg }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="list-title">Chats</div>
+
+<div class="list">
+
+{% for user in users %}
+
+<div class="row">
+
+    <a href="/chat/{{ user }}" style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;">
+
+        <div class="avatar">
+            {% if profile_pictures.get(user) %}
+                <img src="{{ profile_pictures[user] }}">
+            {% else %}
+                <img src="/static/profile_pictures/default.png">
+            {% endif %}
+        </div>
+
+        <div class="row-main">
+            <div class="row-name">{{ user }}</div>
+            <div class="row-preview">{{ last_messages.get(user, "No messages yet") }}</div>
+        </div>
+
+    </a>
+
+    <div class="row-side">
+
+        <span id="status-{{ user }}" class="dot" style="color:red;">🔴</span>
+
+        <form method="POST" action="/delete_chat" style="margin:0;">
+            <input type="hidden" name="user" value="{{ user }}">
+            <button type="submit" class="delete-btn">🗑</button>
+        </form>
+
+    </div>
+
+</div>
+
+{% else %}
+
+<div class="empty">No chats yet — add a username above to start one.</div>
+
+{% endfor %}
+
+</div>
+
+<script src="/static/js/chats.js"></script>
+
+</body>
+</html>

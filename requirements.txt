@@ -1,0 +1,4 @@
+flask
+werkzeug
+sqlalchemy
+pg8000

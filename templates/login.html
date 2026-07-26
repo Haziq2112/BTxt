@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<title>BText Login</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+    --void:#0A0E0F;
+    --panel:#14181A;
+    --panel-2:#1B2023;
+    --signal:#00E676;
+    --signal-dim:#00E67633;
+    --paper:#F5F7F6;
+    --slate:#8A9296;
+    --coral:#FF5D5D;
+}
+
+*{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+}
+
+body{
+    background:var(--void);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    overflow-x:hidden;
+}
+
+/* ---------- HERO / SIGNAL MOTIF ---------- */
+
+.hero{
+    flex:1.1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    padding:40px 24px 20px;
+    min-height:38vh;
+}
+
+.pulse-wrap{
+    position:relative;
+    width:120px;
+    height:120px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-bottom:22px;
+}
+
+.pulse-ring{
+    position:absolute;
+    border:1.5px solid var(--signal);
+    border-radius:50%;
+    opacity:0;
+    animation:pulse 2.6s ease-out infinite;
+}
+
+.pulse-ring.r1{ width:120px; height:120px; animation-delay:0s; }
+.pulse-ring.r2{ width:120px; height:120px; animation-delay:.8s; }
+.pulse-ring.r3{ width:120px; height:120px; animation-delay:1.6s; }
+
+@keyframes pulse{
+    0%{ transform:scale(.45); opacity:.7; }
+    100%{ transform:scale(1); opacity:0; }
+}
+
+.mark{
+    position:relative;
+    width:64px;
+    height:64px;
+    border-radius:20px;
+    background:var(--signal);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:30px;
+    color:var(--void);
+    box-shadow:0 0 40px var(--signal-dim);
+}
+
+.wordmark{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:clamp(28px,7vw,34px);
+    letter-spacing:-0.02em;
+}
+
+.wordmark span{
+    color:var(--signal);
+}
+
+.tagline{
+    margin-top:8px;
+    font-size:14px;
+    color:var(--slate);
+    letter-spacing:.02em;
+}
+
+@media (prefers-reduced-motion: reduce){
+    .pulse-ring{ animation:none; opacity:0; }
+}
+
+/* ---------- FORM SHEET ---------- */
+
+.sheet{
+    background:var(--panel);
+    border-top-left-radius:28px;
+    border-top-right-radius:28px;
+    padding:32px 24px calc(28px + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.field-label{
+    font-size:13px;
+    color:var(--slate);
+    margin:14px 2px 6px;
+    font-weight:500;
+}
+
+.field-label:first-child{
+    margin-top:0;
+}
+
+input{
+    width:100%;
+    padding:16px 16px;
+    border:1.5px solid #262B2E;
+    border-radius:14px;
+    background:var(--panel-2);
+    color:var(--paper);
+    font-size:16px;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    transition:border-color .15s ease;
+}
+
+input:focus{
+    border-color:var(--signal);
+}
+
+.password-box{
+    position:relative;
+    width:100%;
+}
+
+.password-box input{
+    padding-right:52px;
+}
+
+.password-box span{
+    position:absolute;
+    right:16px;
+    top:50%;
+    transform:translateY(-50%);
+    cursor:pointer;
+    user-select:none;
+    font-size:19px;
+}
+
+.error-text{
+    color:var(--coral);
+    font-size:13px;
+    margin:6px 2px 0;
+    min-height:16px;
+}
+
+button{
+    width:100%;
+    padding:17px;
+    border:none;
+    border-radius:14px;
+    font-size:16px;
+    font-weight:600;
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+}
+
+#loginBtn{
+    margin-top:20px;
+    background:var(--signal);
+    color:var(--void);
+    transition:opacity .15s ease, transform .1s ease;
+}
+
+#loginBtn:active{
+    transform:scale(.98);
+}
+
+#loginBtn:disabled{
+    background:#2A2F32;
+    color:var(--slate);
+    cursor:not-allowed;
+}
+
+.signup{
+    margin-top:14px;
+}
+
+.signup button{
+    background:transparent;
+    color:var(--paper);
+    border:1.5px solid #2A2F32;
+}
+
+.signup button:active{
+    background:var(--panel-2);
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="hero">
+
+    <div class="pulse-wrap">
+        <div class="pulse-ring r1"></div>
+        <div class="pulse-ring r2"></div>
+        <div class="pulse-ring r3"></div>
+        <div class="mark">B</div>
+    </div>
+
+    <div class="wordmark">B<span>Text</span></div>
+    <div class="tagline">Talk. Text. Transmit.</div>
+
+</div>
+
+<div class="sheet">
+
+    <form id="loginForm">
+
+        <div class="field-label">Username</div>
+
+        <input
+            type="text"
+            id="username"
+            name="username"
+            placeholder="Your username"
+            required
+        >
+
+        <div id="usernameError" class="error-text"></div>
+
+        <div class="field-label">Password</div>
+
+        <div class="password-box">
+
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Your password"
+                required
+            >
+
+            <span id="togglePassword">👁️</span>
+
+        </div>
+
+        <div id="passwordError" class="error-text"></div>
+
+        <button
+            type="submit"
+            id="loginBtn"
+            disabled>
+            Log In
+        </button>
+
+    </form>
+
+    <div class="signup">
+
+        <a href="/signup" style="text-decoration:none;">
+            <button type="button">
+                Create an Account
+            </button>
+        </a>
+
+    </div>
+
+</div>
+
+<script src="/static/js/form.js"></script>
+
+<script>
+
+submitForm({
+    formId: "loginForm",
+    url: "/login",
+    loadingText: "Logging in..."
+});
+
+const password = document.getElementById("password");
+const toggle = document.getElementById("togglePassword");
+
+const usernameInput = document.querySelector('input[name="username"]');
+const loginBtn = document.getElementById("loginBtn");
+
+function updateLoginButton(){
+
+    loginBtn.disabled =
+        usernameInput.value.trim() === "" ||
+        password.value.trim() === "";
+
+}
+
+usernameInput.addEventListener("input", updateLoginButton);
+password.addEventListener("input", updateLoginButton);
+
+updateLoginButton();
+
+toggle.addEventListener("click", () => {
+
+    if (password.type === "password") {
+
+        password.type = "text";
+        toggle.textContent = "🙈";
+
+    } else {
+
+        password.type = "password";
+        toggle.textContent = "👁️";
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
