@@ -2,7 +2,7 @@ import os
 import secrets
 from datetime import timedelta
 
-from flask import Flask, render_template, request, redirect, session, jsonify
+from flask import Flask, render_template, request, redirect, session, jsonify, make_response
 from werkzeug.security import check_password_hash
 
 from database import (
@@ -32,6 +32,13 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(profile_bp)
 
 
+def no_cache(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 @app.route("/")
 def home():
 
@@ -45,7 +52,7 @@ def home():
 def signup():
 
     if request.method == "GET":
-        return render_template("signup.html")
+        return no_cache(make_response(render_template("signup.html")))
 
     username = request.form.get("username", "").strip().lower()
     password = request.form.get("password", "")
@@ -115,7 +122,7 @@ def login():
         if "username" in session:
             return redirect("/")
 
-        return render_template("login.html")
+        return no_cache(make_response(render_template("login.html")))
 
     username = request.form.get("username", "").strip().lower()
     password = request.form.get("password", "")

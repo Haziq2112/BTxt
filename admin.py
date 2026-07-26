@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, session, jsonify
+from flask import Blueprint, render_template, redirect, session, jsonify, make_response
 
 from database import (
     get_all_profiles, get_suspended_users, get_banned_ips,
@@ -14,6 +14,13 @@ ADMIN_USERNAME = "hazii"
 
 def is_admin():
     return session.get("username", "").lower() == ADMIN_USERNAME
+
+
+def no_cache(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 def build_admin_context():
@@ -48,7 +55,9 @@ def admin():
     context = build_admin_context()
     context["username"] = session["username"]
 
-    return render_template("admin.html", **context)
+    response = make_response(render_template("admin.html", **context))
+
+    return no_cache(response)
 
 
 @admin_bp.route("/admin/content")
@@ -166,11 +175,13 @@ def deleted_accounts():
     if not is_admin():
         return redirect("/chats")
 
-    return render_template(
+    response = make_response(render_template(
         "deleted_accounts.html",
         username=session["username"],
         users=get_deleted_users()
-    )
+    ))
+
+    return no_cache(response)
 
 
 @admin_bp.route("/admin/deleted/list")

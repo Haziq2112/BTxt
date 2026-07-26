@@ -1,6 +1,6 @@
 import base64
 
-from flask import Blueprint, render_template, request, redirect, session, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, session, flash, jsonify, make_response
 from werkzeug.security import check_password_hash
 
 from database import (
@@ -34,6 +34,13 @@ def allowed_file(filename):
     )
 
 
+def no_cache(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 @profile_bp.route("/profile")
 def profile():
 
@@ -42,7 +49,7 @@ def profile():
 
     data = get_profile(session["username"])
 
-    return render_template(
+    response = make_response(render_template(
         "profile.html",
         username=data.username,
         bio=data.bio,
@@ -50,7 +57,9 @@ def profile():
         btext_id=data.btext_id,
         joined_date=data.joined_date,
         phone=data.phone
-    )
+    ))
+
+    return no_cache(response)
 
 
 @profile_bp.route("/profile/update", methods=["POST"])
@@ -146,12 +155,14 @@ def settings():
 
     data = get_profile(session["username"])
 
-    return render_template(
+    response = make_response(render_template(
         "settings.html",
         username=data.username,
         bio=data.bio,
         profile_picture=data.profile_picture
-    )
+    ))
+
+    return no_cache(response)
 
 
 @profile_bp.route("/privacy")
@@ -160,7 +171,11 @@ def privacy():
     if not logged_in():
         return redirect("/login")
 
-    return render_template("privacy.html", username=session["username"])
+    response = make_response(
+        render_template("privacy.html", username=session["username"])
+    )
+
+    return no_cache(response)
 
 
 @profile_bp.route("/chat_settings")
@@ -169,7 +184,11 @@ def chat_settings():
     if not logged_in():
         return redirect("/login")
 
-    return render_template("chat_settings.html", username=session["username"])
+    response = make_response(
+        render_template("chat_settings.html", username=session["username"])
+    )
+
+    return no_cache(response)
 
 
 @profile_bp.route("/appearance")
@@ -178,7 +197,11 @@ def appearance():
     if not logged_in():
         return redirect("/login")
 
-    return render_template("appearance.html", username=session["username"])
+    response = make_response(
+        render_template("appearance.html", username=session["username"])
+    )
+
+    return no_cache(response)
 
 
 @profile_bp.route("/about")
@@ -187,7 +210,11 @@ def about():
     if not logged_in():
         return redirect("/login")
 
-    return render_template("about.html", username=session["username"])
+    response = make_response(
+        render_template("about.html", username=session["username"])
+    )
+
+    return no_cache(response)
 
 
 @profile_bp.route("/change_password", methods=["GET", "POST"])
@@ -226,7 +253,11 @@ def change_password_page():
 
         return redirect("/profile")
 
-    return render_template("change_password.html", username=session["username"])
+    response = make_response(
+        render_template("change_password.html", username=session["username"])
+    )
+
+    return no_cache(response)
 
 
 @profile_bp.route("/profile/delete_account", methods=["POST"])
@@ -237,7 +268,7 @@ def delete_own_account():
 
     username = session["username"]
 
-    add_deleted_user(username, deleted_by="user")
+    add_deleted_user(username, deleted_by=username)
     delete_user(username)
 
     session.clear()
