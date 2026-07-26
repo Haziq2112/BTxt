@@ -1,5 +1,8 @@
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
 
 from flask import (
     Blueprint, render_template, request, redirect,
@@ -145,7 +148,7 @@ def send():
     if not sender or not receiver or not message:
         return "", 204
 
-    timestamp = datetime.now().strftime("%I:%M %p")
+    timestamp = datetime.now(IST).strftime("%I:%M %p")
 
     reply_text = request.form.get("reply_text", "")
     reply_self = request.form.get("reply_self") == "true"

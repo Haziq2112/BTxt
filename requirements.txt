@@ -2,3 +2,4 @@ flask
 werkzeug
 sqlalchemy
 pg8000
+tzdata
