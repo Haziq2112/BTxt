@@ -8,7 +8,7 @@ to a Postgres connection string and it switches automatically.
 Both use the same SQL here, so there's only one code path to trust.
 """
 
-from datetime import datetime
+from datetime import datetime,timezone
 import os
 import secrets
 import string
@@ -587,17 +587,17 @@ def get_banned_ips():
 def save_message(sender, receiver, message, timestamp, reply_text="", reply_self=False):
 
     message_id = str(uuid.uuid4())
-
+    created_at = datetime.now(timezone.utc).isoformat()
     with get_conn() as conn:
 
         conn.execute(
             text("""
             INSERT INTO messages
-                (id, sender, receiver, message, timestamp, edited,
-                 reply_text, reply_self, deleted_everyone, deleted_for)
+                (id, sender, receiver, message, timestamp, created_at, edited,
+                reply_text, reply_self, deleted_everyone, deleted_for)
             VALUES
-                (:id, :sender, :receiver, :message, :timestamp, 0,
-                 :reply_text, :reply_self, 0, '')
+            (:id, :sender, :receiver, :message, :timestamp, :created_at, 0,
+                :reply_text, :reply_self, 0, '')
             """),
             {
                 "id": message_id,
@@ -605,6 +605,7 @@ def save_message(sender, receiver, message, timestamp, reply_text="", reply_self
                 "receiver": receiver,
                 "message": message,
                 "timestamp": timestamp,
+                "created_at": created_at,
                 "reply_text": reply_text,
                 "reply_self": 1 if reply_self else 0
             }
@@ -624,7 +625,12 @@ def get_messages(user1, user2):
             FROM messages
             WHERE (sender=:u1 AND receiver=:u2)
                OR (sender=:u2 AND receiver=:u1)
-            ORDER BY timestamp ASC
+            ORDER BY
+            CASE
+                WHEN created_at IS NULL OR created_at = ''
+                THEN timestamp
+                ELSE created_at
+            END ASC
             """),
             {"u1": user1, "u2": user2}
         )

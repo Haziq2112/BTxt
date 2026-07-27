@@ -87,6 +87,32 @@ scrollBtn.addEventListener("click", scrollToBottom);
 
 document.addEventListener("click", closeMenu);
 
+// Mobile browsers don't reliably resize position:fixed elements around
+// the on-screen keyboard. The VisualViewport API fires whenever the
+// keyboard opens/closes, so we use it to reposition the input bar,
+// chat area, and scroll button to sit exactly above the keyboard
+// instead of jumping or getting hidden behind it.
+if (window.visualViewport) {
+
+    function handleViewportChange() {
+        const keyboardHeight = Math.max(
+            0,
+            window.innerHeight - window.visualViewport.height
+        );
+
+        chatForm.style.bottom = (14 + keyboardHeight) + "px";
+        chatBox.style.bottom = (92 + keyboardHeight) + "px";
+        scrollBtn.style.bottom = (100 + keyboardHeight) + "px";
+
+        if (isAtBottom()) {
+            scrollToBottom();
+        }
+    }
+
+    window.visualViewport.addEventListener("resize", handleViewportChange);
+    window.visualViewport.addEventListener("scroll", handleViewportChange);
+}
+
 // =====================================
 // RENDERING ENGINE
 // =====================================
@@ -354,6 +380,17 @@ async function deleteForMe() {
 chatForm.addEventListener("submit", async function (e) {
     e.preventDefault();
 
+    console.log("chatForm submit fired at", new Date().toISOString());
+
+    // Guard against firing twice in a row — without this, two
+    // near-simultaneous submit events (e.g. a stray Enter keydown
+    // landing right after a button tap) could send the same
+    // message twice.
+    if (sending) {
+        console.log("submit ignored — already sending");
+        return;
+    }
+
     const text = messageInput.value.trim();
     if (text === "") return;
 
@@ -395,7 +432,8 @@ chatForm.addEventListener("submit", async function (e) {
 
 // Enter to send
 messageInput.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+        console.log("Enter-to-send triggered at", new Date().toISOString());
         e.preventDefault();
         chatForm.requestSubmit();
     }
@@ -426,4 +464,14 @@ window.addEventListener("load", function () {
     loadMessages(true);
     scrollToBottom();
     startSync();
+});
+
+// Some mobile browsers restore previously-typed (but never sent) form
+// field values when navigating back to a page — this guarantees the
+// message box and any pending reply are always wiped clean on arrival,
+// regardless of what the browser tries to restore.
+window.addEventListener("pageshow", function () {
+    messageInput.value = "";
+    autoResizeInput();
+    cancelReply();
 });
