@@ -2,6 +2,8 @@ import os
 import secrets
 from datetime import timedelta
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 from flask import Flask, render_template, request, redirect, session, jsonify, make_response
 from werkzeug.security import check_password_hash
 
@@ -23,6 +25,7 @@ from admin import admin_bp
 from profile import profile_bp
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 app.permanent_session_lifetime = timedelta(days=365)
