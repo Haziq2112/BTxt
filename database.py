@@ -14,7 +14,7 @@ import secrets
 import string
 import uuid
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, inspect
 from werkzeug.security import generate_password_hash
 
 
@@ -134,17 +134,23 @@ def init_db():
         )
         """))
 
-        # Automatically add new columns on existing databases.
-        # IF NOT EXISTS avoids ever triggering an error here at all —
-        # important on Postgres specifically, where one failed statement
-        # poisons the entire transaction and silently blocks everything
-        # after it, even if Python's try/except swallows the exception.
+    # Column migration, checked separately using SQLAlchemy's own
+    # inspection instead of "ADD COLUMN IF NOT EXISTS" — that syntax
+    # isn't supported by older SQLite builds (e.g. some bundled with
+    # Termux's Python), even though Postgres understands it fine.
 
-        conn.execute(text("""
-            ALTER TABLE messages
-            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP
-        """))
+    inspector = inspect(engine)
+    existing_columns = [col["name"] for col in inspector.get_columns("messages")]
 
+    if "created_at" not in existing_columns:
+
+        with get_conn() as conn:
+            conn.execute(text("""
+                ALTER TABLE messages
+                ADD COLUMN created_at TIMESTAMP
+            """))
+
+    with get_conn() as conn:
         conn.execute(text("""
             UPDATE messages
             SET created_at = CURRENT_TIMESTAMP
