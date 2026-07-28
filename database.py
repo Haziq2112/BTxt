@@ -134,6 +134,24 @@ def init_db():
         )
         """))
 
+        # Automatically add new columns on existing databases
+
+        try:
+            conn.execute(text("""
+                ALTER TABLE messages
+                ADD COLUMN created_at TIMESTAMP
+            """))
+        except Exception:
+            pass
+
+        try:
+            conn.execute(text("""
+                UPDATE messages
+                SET created_at = CURRENT_TIMESTAMP
+                WHERE created_at IS NULL
+            """))
+        except Exception:
+            pass
 
 def generate_btext_id():
 
