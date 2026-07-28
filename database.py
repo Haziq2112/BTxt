@@ -8,7 +8,7 @@ to a Postgres connection string and it switches automatically.
 Both use the same SQL here, so there's only one code path to trust.
 """
 
-from datetime import datetime,timezone
+from datetime import datetime, timezone
 import os
 import secrets
 import string
@@ -134,24 +134,23 @@ def init_db():
         )
         """))
 
-        # Automatically add new columns on existing databases
+        # Automatically add new columns on existing databases.
+        # IF NOT EXISTS avoids ever triggering an error here at all —
+        # important on Postgres specifically, where one failed statement
+        # poisons the entire transaction and silently blocks everything
+        # after it, even if Python's try/except swallows the exception.
 
-        try:
-            conn.execute(text("""
-                ALTER TABLE messages
-                ADD COLUMN created_at TIMESTAMP
-            """))
-        except Exception:
-            pass
+        conn.execute(text("""
+            ALTER TABLE messages
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP
+        """))
 
-        try:
-            conn.execute(text("""
-                UPDATE messages
-                SET created_at = CURRENT_TIMESTAMP
-                WHERE created_at IS NULL
-            """))
-        except Exception:
-            pass
+        conn.execute(text("""
+            UPDATE messages
+            SET created_at = CURRENT_TIMESTAMP
+            WHERE created_at IS NULL
+        """))
+
 
 def generate_btext_id():
 
@@ -606,16 +605,17 @@ def save_message(sender, receiver, message, timestamp, reply_text="", reply_self
 
     message_id = str(uuid.uuid4())
     created_at = datetime.now(timezone.utc).isoformat()
+
     with get_conn() as conn:
 
         conn.execute(
             text("""
             INSERT INTO messages
                 (id, sender, receiver, message, timestamp, created_at, edited,
-                reply_text, reply_self, deleted_everyone, deleted_for)
+                 reply_text, reply_self, deleted_everyone, deleted_for)
             VALUES
-            (:id, :sender, :receiver, :message, :timestamp, :created_at, 0,
-                :reply_text, :reply_self, 0, '')
+                (:id, :sender, :receiver, :message, :timestamp, :created_at, 0,
+                 :reply_text, :reply_self, 0, '')
             """),
             {
                 "id": message_id,
@@ -755,6 +755,7 @@ def get_profile_picture(username):
 
         return row.profile_picture if row else None
 
+
 def update_profile(old_username, new_username, bio):
 
     with get_conn() as conn:
@@ -809,6 +810,74 @@ def update_profile(old_username, new_username, bio):
             }
         )
 
+        # Without these, every message this person ever sent or
+        # received keeps their OLD username permanently stamped on
+        # it — misaligning bubbles (since the chat page compares
+        # against the CURRENT username) and hiding old messages from
+        # last-message lookups, since those queries filter by the
+        # current username too.
+
+        conn.execute(
+            text("""
+                UPDATE messages
+                SET sender=:new_username
+                WHERE sender=:old_username
+            """),
+            {
+                "new_username": new_username,
+                "old_username": old_username
+            }
+        )
+
+        conn.execute(
+            text("""
+                UPDATE messages
+                SET receiver=:new_username
+                WHERE receiver=:old_username
+            """),
+            {
+                "new_username": new_username,
+                "old_username": old_username
+            }
+        )
+
+        # deleted_for is a comma-separated list of usernames stored as
+        # plain text, not a real column reference — a rename would
+        # otherwise silently "undo" a previous delete-for-me, since
+        # the old name in that list no longer matches the renamed
+        # user going forward.
+
+        rows = conn.execute(
+            text("""
+                SELECT id, deleted_for
+                FROM messages
+                WHERE deleted_for LIKE :pattern
+            """),
+            {"pattern": f"%{old_username}%"}
+        ).fetchall()
+
+        for row in rows:
+
+            names = [n for n in (row.deleted_for or "").split(",") if n]
+
+            updated_names = [
+                new_username if n == old_username else n
+                for n in names
+            ]
+
+            conn.execute(
+                text("""
+                    UPDATE messages
+                    SET deleted_for=:deleted_for
+                    WHERE id=:id
+                """),
+                {
+                    "deleted_for": ",".join(updated_names),
+                    "id": row.id
+                }
+            )
+
+
 def update_profile_picture(username, picture_data_url):
 
     # picture_data_url is a full data: URL (e.g. "data:image/png;base64,....")
@@ -851,6 +920,7 @@ def get_all_profiles():
         )
 
         return result.fetchall()
+
 
 def username_exists(username):
 
