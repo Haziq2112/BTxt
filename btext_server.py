@@ -14,8 +14,8 @@ from database import (
     get_ip_users,
     add_ip_user,
     set_user_ip,
-    get_banned_users,
-    get_suspended_users,
+    is_banned,
+    is_suspended,
     get_banned_ips,
     is_deleted
 )
@@ -40,6 +40,103 @@ def no_cache(response):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
+
+# Routes that respond with JSON (fetch/AJAX calls) rather than a
+# full page — if a session gets invalidated mid-request on one of
+# these, the person should get a JSON signal their JS can react to,
+# not an HTML redirect their fetch() call can't do anything with.
+JSON_RESPONSE_PATH_PREFIXES = (
+    "/messages",
+    "/send",
+    "/edit_message",
+    "/delete_message",
+    "/online_status",
+    "/check_username",
+    "/profile/check_username",
+    "/admin/",
+)
+
+
+@app.before_request
+def enforce_valid_session():
+
+    # Runs before every single request, across every blueprint —
+    # this is what makes a suspend/ban/delete take effect instantly
+    # instead of only being caught the next time someone logs in.
+
+    if "username" not in session:
+        return
+
+    username = session["username"]
+
+    session_invalid = (
+        get_user(username) is None
+        or is_deleted(username)
+        or is_banned(username)
+        or is_suspended(username)
+    )
+
+    if not session_invalid:
+        return
+
+    session.clear()
+
+    wants_json = any(
+        request.path.startswith(prefix)
+        for prefix in JSON_RESPONSE_PATH_PREFIXES
+    )
+
+    if wants_json:
+        return jsonify({
+            "success": False,
+            "session_invalid": True,
+            "message": "Your session has ended."
+        }), 401
+
+    return redirect("/login")
+
+@app.route("/test-crash")
+def test_crash():
+    raise Exception("Just testing the error page")
+
+@app.errorhandler(404)
+def handle_not_found(error):
+
+    if any(request.path.startswith(p) for p in JSON_RESPONSE_PATH_PREFIXES):
+        return jsonify({
+            "success": False,
+            "message": "That doesn't exist."
+        }), 404
+
+    return no_cache(make_response(render_template(
+        "error.html",
+        code=404,
+        title="Page not found",
+        message="That page doesn't exist, or the link is wrong."
+    ))), 404
+
+
+@app.errorhandler(500)
+def handle_server_error(error):
+
+    # Flask already logs the real traceback to the server logs before
+    # this runs — this only controls what the *person* sees, so a
+    # crash never shows a blank page or breaks a fetch() call that's
+    # expecting JSON back.
+
+    if any(request.path.startswith(p) for p in JSON_RESPONSE_PATH_PREFIXES):
+        return jsonify({
+            "success": False,
+            "message": "Something went wrong. Please try again."
+        }), 500
+
+    return no_cache(make_response(render_template(
+        "error.html",
+        code=500,
+        title="Something broke",
+        message="That's on us, not you. Try again in a moment."
+    ))), 500
 
 
 @app.route("/")
@@ -138,14 +235,14 @@ def login():
             "message": "This device has been banned."
         })
 
-    if username in get_banned_users():
+    if is_banned(username):
         return jsonify({
             "success": False,
             "field": "password",
             "message": "This account has been banned."
         })
 
-    if username in get_suspended_users():
+    if is_suspended(username):
         return jsonify({
             "success": False,
             "field": "password",

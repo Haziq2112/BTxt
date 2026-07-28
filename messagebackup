@@ -1,5 +1,8 @@
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
 
 from flask import (
     Blueprint, render_template, request, redirect,
@@ -7,7 +10,7 @@ from flask import (
 )
 
 from database import (
-    get_contacts, add_contact, save_message, username_exists,
+    get_contacts, add_contact, get_all_users, save_message,
     get_messages, edit_message, get_last_message,
     delete_message_everyone, remove_contact, get_profile_picture,
     delete_message_for_me
@@ -109,9 +112,10 @@ def add_user_route():
     current_user = session["username"]
     new_user = request.form.get("newuser", "").strip().lower()
 
+    users = get_all_users()
     contacts = get_contacts(current_user)
 
-    if not username_exists(new_user):
+    if new_user not in users:
         flash("Username not found")
         return redirect("/chats")
 
@@ -144,7 +148,7 @@ def send():
     if not sender or not receiver or not message:
         return "", 204
 
-    timestamp = datetime.now().strftime("%I:%M %p")
+    timestamp = datetime.now(IST).strftime("%I:%M %p")
 
     reply_text = request.form.get("reply_text", "")
     reply_self = request.form.get("reply_self") == "true"

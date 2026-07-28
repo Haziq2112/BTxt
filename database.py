@@ -218,6 +218,36 @@ def is_deleted(username):
         return row is not None
 
 
+def is_banned(username):
+
+    with get_conn() as conn:
+
+        row = conn.execute(
+            text("""
+            SELECT 1 FROM banned_users
+            WHERE LOWER(username)=LOWER(:username)
+            """),
+            {"username": username}
+        ).fetchone()
+
+        return row is not None
+
+
+def is_suspended(username):
+
+    with get_conn() as conn:
+
+        row = conn.execute(
+            text("""
+            SELECT 1 FROM suspended_users
+            WHERE LOWER(username)=LOWER(:username)
+            """),
+            {"username": username}
+        ).fetchone()
+
+        return row is not None
+
+
 def get_user(username):
 
     with get_conn() as conn:
@@ -723,10 +753,24 @@ def get_last_message(user1, user2):
 
     messages = get_messages(user1, user2)
 
-    if not messages:
-        return "No messages yet"
+    # Walk backward from the most recent message, skipping anything
+    # that's been deleted — either for everyone, or "deleted for me"
+    # specifically for user1 (the person whose chat list we're
+    # building this preview for).
 
-    return messages[-1].message
+    for msg in reversed(messages):
+
+        if msg.deleted_everyone:
+            continue
+
+        deleted_for = [u.lower() for u in (msg.deleted_for or "").split(",") if u]
+
+        if user1.lower() in deleted_for:
+            continue
+
+        return msg.message
+
+    return "No messages yet"
 
 
 # ============================================================

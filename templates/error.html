@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<title>BText</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+    --void:#0A0E0F;
+    --panel:#14181A;
+    --panel-2:#1B2023;
+    --signal:#00E676;
+    --paper:#F5F7F6;
+    --slate:#8A9296;
+    --coral:#FF5D5D;
+}
+
+*{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+body{
+    margin:0;
+    background:var(--void);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    text-align:center;
+}
+
+.code{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:64px;
+    color:var(--signal);
+    line-height:1;
+}
+
+.title{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:20px;
+    margin-top:16px;
+}
+
+.message{
+    color:var(--slate);
+    margin-top:8px;
+    font-size:15px;
+    max-width:320px;
+    line-height:1.5;
+}
+
+.button{
+    display:inline-block;
+    margin-top:28px;
+    padding:15px 32px;
+    border-radius:14px;
+    background:var(--signal);
+    color:var(--void);
+    text-decoration:none;
+    font-weight:600;
+    font-size:15px;
+}
+
+.button:active{
+    opacity:.85;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="code">{{ code }}</div>
+<div class="title">{{ title }}</div>
+<div class="message">{{ message }}</div>
+
+<a href="/chats" class="button">← Back to Chats</a>
+
+</body>
+</html>
