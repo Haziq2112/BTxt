@@ -645,9 +645,9 @@ def get_messages(user1, user2):
                OR (sender=:u2 AND receiver=:u1)
             ORDER BY
             CASE
-                WHEN created_at IS NULL OR created_at = ''
+                WHEN created_at IS NULL
                 THEN timestamp
-                ELSE created_at
+                ELSE CAST(created_at AS TEXT)
             END ASC
             """),
             {"u1": user1, "u2": user2}
