@@ -64,7 +64,7 @@ function closeEditModal() {
 
 function cancelReply() {
     replyingTo = null;
-    replyPreview.style.display = "none";
+    replyPreview.classList.remove("show");
 }
 
 function escapeHTML(str) {
@@ -78,6 +78,21 @@ function escapeHTML(str) {
 // =====================================
 
 messageInput.addEventListener("input", autoResizeInput);
+
+// Typing indicator — pings the server at most once every 1.5s while
+// actively typing, rather than on every single keystroke.
+let lastTypingPing = 0;
+
+messageInput.addEventListener("input", function () {
+    const now = Date.now();
+    if (now - lastTypingPing < 1500) return;
+    lastTypingPing = now;
+
+    const formData = new FormData();
+    formData.append("chatwith", chatWith);
+
+    fetch("/typing", { method: "POST", body: formData }).catch(() => {});
+});
 
 chatBox.addEventListener("scroll", () => {
     scrollBtn.style.display = isAtBottom() ? "none" : "block";
@@ -120,14 +135,43 @@ if (window.visualViewport) {
 function buildReplyHTML(msg) {
     if (!msg.reply_text) return "";
 
+    // Older messages (sent before this feature existed) won't have
+    // a reply_to_id — only make the preview clickable when we
+    // actually know which message to jump to.
+    const clickAttr = msg.reply_to_id
+        ? `onclick="jumpToMessage('${msg.reply_to_id}')" style="cursor:pointer;"`
+        : "";
+
     return `
-        <div class="reply-box">
+        <div class="reply-box" ${clickAttr}>
             <div style="color:#b998ff;font-weight:bold;margin-bottom:4px;">
                 ${msg.reply_self ? "Replying to yourself" : "Replying"}
             </div>
             <div>${escapeHTML(msg.reply_text)}</div>
         </div>
     `;
+}
+
+function jumpToMessage(id) {
+    const target = document.querySelector(`.bubble[data-id="${id}"]`);
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("highlight");
+
+    setTimeout(function () {
+        target.classList.remove("highlight");
+    }, 1200);
+}
+
+function buildTicks(msg) {
+    // Only your own outgoing messages show ticks — there's no
+    // reason to show delivery status on messages you received.
+    if (msg.sender !== username) return "";
+
+    return msg.seen
+        ? `<span class="ticks seen">✓✓</span>`
+        : `<span class="ticks">✓</span>`;
 }
 
 function buildBubble(msg) {
@@ -139,7 +183,10 @@ function buildBubble(msg) {
     bubble.innerHTML = `
         ${buildReplyHTML(msg)}
         <div class="message-text">${escapeHTML(msg.text)}</div>
-        <div class="msg-time">${msg.edited ? "edited • " : ""}${msg.time || ""}</div>
+        <div class="msg-time">
+            <span class="time-text">${msg.edited ? "edited • " : ""}${msg.time || ""}</span>
+            ${buildTicks(msg)}
+        </div>
     `;
 
     attachLongPress(bubble, msg);
@@ -244,6 +291,9 @@ function showMenu(message, x, y) {
     msgMenu.style.top = y + "px";
 }
 
+const SWIPE_THRESHOLD = 55;
+const SWIPE_MAX = 80;
+
 function attachLongPress(bubble, message) {
     // Desktop
     bubble.addEventListener("contextmenu", function (e) {
@@ -251,17 +301,72 @@ function attachLongPress(bubble, message) {
         showMenu(message, e.pageX, e.pageY);
     });
 
-    // Mobile
+    // Mobile — long press opens the menu, a horizontal swipe
+    // triggers reply. touchmove decides which gesture is happening:
+    // once movement is clearly more horizontal than vertical, the
+    // long-press timer is cancelled and the bubble starts tracking
+    // the swipe instead.
     let timer;
+    let startX = 0;
+    let startY = 0;
+    let dragging = false;
+    let swiped = false;
 
     bubble.addEventListener("touchstart", function (e) {
+        startX = e.touches[0].pageX;
+        startY = e.touches[0].pageY;
+        dragging = false;
+        swiped = false;
+
         timer = setTimeout(function () {
             showMenu(message, e.touches[0].pageX, e.touches[0].pageY);
         }, LONG_PRESS_TIME);
     });
 
+    bubble.addEventListener("touchmove", function (e) {
+        const deltaX = e.touches[0].pageX - startX;
+        const deltaY = e.touches[0].pageY - startY;
+
+        if (!dragging) {
+            // Not yet committed to a gesture — decide based on which
+            // direction has moved further so far.
+            if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                dragging = true;
+                clearTimeout(timer);
+            } else if (Math.abs(deltaY) > 10) {
+                // Clearly scrolling vertically — this isn't a swipe,
+                // let the page scroll normally.
+                clearTimeout(timer);
+                return;
+            } else {
+                return;
+            }
+        }
+
+        // Only allow swiping right (WhatsApp-style reply gesture),
+        // clamped to a max distance so it doesn't fly off screen.
+        const clamped = Math.max(0, Math.min(deltaX, SWIPE_MAX));
+
+        e.preventDefault();
+        bubble.style.transform = `translateX(${clamped}px)`;
+        bubble.style.setProperty("--swipe-progress", clamped / SWIPE_THRESHOLD);
+
+        swiped = clamped >= SWIPE_THRESHOLD;
+    });
+
     bubble.addEventListener("touchend", function () {
         clearTimeout(timer);
+
+        bubble.style.transform = "";
+        bubble.style.setProperty("--swipe-progress", 0);
+
+        if (dragging && swiped) {
+            selectedMessage = message;
+            replyMessage();
+        }
+
+        dragging = false;
+        swiped = false;
     });
 }
 
@@ -296,7 +401,7 @@ function replyMessage() {
     if (!selectedMessage) return;
 
     replyingTo = selectedMessage;
-    replyPreview.style.display = "block";
+    replyPreview.classList.add("show");
 
     replyTitle.innerText =
         selectedMessage.sender === username ? "Replying to yourself" : "Replying";
@@ -404,6 +509,7 @@ chatForm.addEventListener("submit", async function (e) {
     if (replyingTo) {
         formData.append("reply_text", replyingTo.text);
         formData.append("reply_self", replyingTo.sender === username);
+        formData.append("reply_to_id", replyingTo.id);
     }
 
     // Keep keyboard open
@@ -439,10 +545,36 @@ messageInput.addEventListener("keydown", function (e) {
     }
 });
 
+// ---------- TYPING INDICATOR DISPLAY ----------
+
+const statusEl = document.querySelector(".status");
+const originalStatusHTML = statusEl ? statusEl.innerHTML : "";
+
+async function checkTypingStatus() {
+    if (!statusEl) return;
+
+    try {
+        const response = await fetch(
+            `/typing_status?chatwith=${encodeURIComponent(chatWith)}`,
+            { cache: "no-store" }
+        );
+
+        const data = await response.json();
+
+        statusEl.innerHTML = data.typing
+            ? `<span class="typing-text">typing...</span>`
+            : originalStatusHTML;
+
+    } catch (error) {
+        console.log("Typing status check failed:", error);
+    }
+}
+
 function startSync() {
     setInterval(async function () {
         if (loading) return;
         await loadMessages();
+        checkTypingStatus();
     }, REFRESH_RATE);
 
     // Mobile browsers throttle/pause setInterval when the tab isn't

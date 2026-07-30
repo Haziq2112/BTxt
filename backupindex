@@ -129,11 +129,6 @@ body{
     color:var(--slate);
 }
 
-.typing-text{
-    color:var(--signal);
-    font-style:italic;
-}
-
 /* =========================
 CHAT AREA
 ========================= */
@@ -146,8 +141,6 @@ CHAT AREA
     right:0;
     overflow-y:auto;
     padding:16px 14px;
-    -webkit-user-select:none;
-    user-select:none;
 }
 
 /* =========================
@@ -164,37 +157,6 @@ MESSAGE BUBBLES
     word-wrap:break-word;
     overflow-wrap:break-word;
     animation:fadeIn .18s ease;
-
-    -webkit-user-select:none;
-    user-select:none;
-    -webkit-touch-callout:none;
-
-    position:relative;
-    touch-action:pan-y;
-    transition:transform .2s ease;
-    --swipe-progress:0;
-}
-
-.bubble::before{
-    content:"↩";
-    position:absolute;
-    left:-30px;
-    top:50%;
-    transform:translateY(-50%);
-    font-size:16px;
-    color:var(--signal);
-    opacity:var(--swipe-progress);
-    transition:opacity .1s ease;
-}
-
-.bubble.highlight{
-    animation:highlightFlash 1.2s ease;
-}
-
-@keyframes highlightFlash{
-    0%{ box-shadow:0 0 0 2px var(--signal); }
-    70%{ box-shadow:0 0 0 2px var(--signal); }
-    100%{ box-shadow:0 0 0 0 transparent; }
 }
 
 .me{
@@ -226,26 +188,8 @@ MESSAGE BUBBLES
 .msg-time{
     margin-top:5px;
     font-size:11px;
+    opacity:.6;
     text-align:right;
-    display:flex;
-    justify-content:flex-end;
-    align-items:center;
-    gap:4px;
-}
-
-.time-text{
-    opacity:.6;
-}
-
-.ticks{
-    font-size:12px;
-    opacity:.6;
-    color:var(--paper);
-}
-
-.ticks.seen{
-    opacity:1;
-    color:var(--signal);
 }
 
 /* =========================
@@ -261,24 +205,12 @@ INPUT BAR
 }
 
 #replyPreview{
+    display:none;
     background:var(--panel);
     border:1px solid #262B2E;
     padding:10px 12px;
     border-radius:14px;
     margin-bottom:8px;
-
-    transform:translateX(-120%);
-    opacity:0;
-    transition:transform .28s ease, opacity .28s ease;
-
-    display:block;
-    pointer-events:none;
-}
-
-#replyPreview.show{
-    transform:translateX(0);
-    opacity:1;
-    pointer-events:auto;
 }
 
 #replyTitle{
@@ -527,9 +459,9 @@ EDIT MODAL
 <div class="status">
 
 {% if is_online(chatwith) %}
-Online
+🟢 Online
 {% else %}
-Offline
+🔴 Offline
 {% endif %}
 
 </div>

@@ -150,6 +150,22 @@ def init_db():
                 ADD COLUMN created_at TIMESTAMP
             """))
 
+    if "seen" not in existing_columns:
+
+        with get_conn() as conn:
+            conn.execute(text("""
+                ALTER TABLE messages
+                ADD COLUMN seen INTEGER DEFAULT 0
+            """))
+
+    if "reply_to_id" not in existing_columns:
+
+        with get_conn() as conn:
+            conn.execute(text("""
+                ALTER TABLE messages
+                ADD COLUMN reply_to_id TEXT
+            """))
+
     with get_conn() as conn:
         conn.execute(text("""
             UPDATE messages
@@ -637,7 +653,7 @@ def get_banned_ips():
 # MESSAGES
 # ============================================================
 
-def save_message(sender, receiver, message, timestamp, reply_text="", reply_self=False):
+def save_message(sender, receiver, message, timestamp, reply_text="", reply_self=False, reply_to_id=None):
 
     message_id = str(uuid.uuid4())
     created_at = datetime.now(timezone.utc).isoformat()
@@ -648,10 +664,10 @@ def save_message(sender, receiver, message, timestamp, reply_text="", reply_self
             text("""
             INSERT INTO messages
                 (id, sender, receiver, message, timestamp, created_at, edited,
-                 reply_text, reply_self, deleted_everyone, deleted_for)
+                 reply_text, reply_self, deleted_everyone, deleted_for, seen, reply_to_id)
             VALUES
                 (:id, :sender, :receiver, :message, :timestamp, :created_at, 0,
-                 :reply_text, :reply_self, 0, '')
+                 :reply_text, :reply_self, 0, '', 0, :reply_to_id)
             """),
             {
                 "id": message_id,
@@ -661,11 +677,31 @@ def save_message(sender, receiver, message, timestamp, reply_text="", reply_self
                 "timestamp": timestamp,
                 "created_at": created_at,
                 "reply_text": reply_text,
-                "reply_self": 1 if reply_self else 0
+                "reply_self": 1 if reply_self else 0,
+                "reply_to_id": reply_to_id
             }
         )
 
     return message_id
+
+
+def mark_messages_seen(viewer, other_user):
+
+    # Called whenever `viewer` loads/polls messages in a chat with
+    # `other_user` — marks every message THAT PERSON sent them as
+    # seen, since fetching it in this specific chat means they're
+    # actually looking at it right now.
+
+    with get_conn() as conn:
+
+        conn.execute(
+            text("""
+            UPDATE messages
+            SET seen=1
+            WHERE sender=:other_user AND receiver=:viewer AND seen=0
+            """),
+            {"other_user": other_user, "viewer": viewer}
+        )
 
 
 def get_messages(user1, user2):
@@ -675,7 +711,7 @@ def get_messages(user1, user2):
         result = conn.execute(
             text("""
             SELECT id, sender, receiver, message, timestamp, edited,
-                   reply_text, reply_self, deleted_everyone, deleted_for
+                   reply_text, reply_self, deleted_everyone, deleted_for, seen, reply_to_id
             FROM messages
             WHERE (sender=:u1 AND receiver=:u2)
                OR (sender=:u2 AND receiver=:u1)
@@ -747,6 +783,25 @@ def delete_message_for_me(message_id, username):
         )
 
         return True
+
+
+def get_unread_count(viewer, other_user):
+
+    with get_conn() as conn:
+
+        row = conn.execute(
+            text("""
+            SELECT COUNT(*) AS count
+            FROM messages
+            WHERE sender=:other_user
+              AND receiver=:viewer
+              AND seen=0
+              AND deleted_everyone=0
+            """),
+            {"other_user": other_user, "viewer": viewer}
+        ).fetchone()
+
+        return row.count if row else 0
 
 
 def get_last_message(user1, user2):
@@ -988,3 +1043,4 @@ def username_exists(username):
         )
 
         return result.first() is not None
+

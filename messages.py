@@ -1,5 +1,8 @@
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
 
 from flask import (
     Blueprint, render_template, request, redirect,
@@ -8,9 +11,9 @@ from flask import (
 
 from database import (
     get_contacts, add_contact, save_message, username_exists,
-    get_messages, edit_message, get_last_message,
-    delete_message_everyone, remove_contact, get_profile_picture,
-    delete_message_for_me
+    get_messages, edit_message, get_last_message, mark_messages_seen,
+    get_unread_count, delete_message_everyone, remove_contact,
+    get_profile_picture, delete_message_for_me
 )
 
 messages_bp = Blueprint("messages", __name__)
@@ -27,6 +30,22 @@ def is_online(username):
     if username not in last_active:
         return False
     return time.time() - last_active[username] < 5
+
+
+# Typing status is transient — no reason to persist it in the
+# database, an in-memory dict works the same way last_active does.
+typing_status = {}
+
+
+def set_typing(typer, recipient):
+    typing_status[(typer, recipient)] = time.time()
+
+
+def is_typing(typer, recipient):
+    key = (typer, recipient)
+    if key not in typing_status:
+        return False
+    return time.time() - typing_status[key] < 3
 
 
 def no_cache(response):
@@ -63,10 +82,12 @@ def chats():
 
     last_messages = {}
     profile_pictures = {}
+    unread_counts = {}
 
     for user in users:
         last_messages[user] = get_last_message(current_user, user)
         profile_pictures[user] = get_profile_picture(user)
+        unread_counts[user] = get_unread_count(current_user, user)
 
     response = make_response(render_template(
         "chats.html",
@@ -74,7 +95,8 @@ def chats():
         users=users,
         is_online=is_online,
         last_messages=last_messages,
-        profile_pictures=profile_pictures
+        profile_pictures=profile_pictures,
+        unread_counts=unread_counts
     ))
 
     return no_cache(response)
@@ -144,12 +166,13 @@ def send():
     if not sender or not receiver or not message:
         return "", 204
 
-    timestamp = datetime.now().strftime("%I:%M %p")
+    timestamp = datetime.now(IST).strftime("%I:%M %p")
 
     reply_text = request.form.get("reply_text", "")
     reply_self = request.form.get("reply_self") == "true"
+    reply_to_id = request.form.get("reply_to_id") or None
 
-    save_message(sender, receiver, message, timestamp, reply_text, reply_self)
+    save_message(sender, receiver, message, timestamp, reply_text, reply_self, reply_to_id)
 
     add_contact(sender, receiver)
     add_contact(receiver, sender)
@@ -176,6 +199,11 @@ def messages():
     if not chatwith:
         return jsonify({"messages": []})
 
+    # The viewer is actively polling this exact chat right now —
+    # that means anything the other person sent them is being seen
+    # this instant.
+    mark_messages_seen(username, chatwith)
+
     rows = get_messages(username, chatwith)
 
     result = []
@@ -193,6 +221,8 @@ def messages():
             "edited": bool(row.edited),
             "reply_text": row.reply_text,
             "reply_self": bool(row.reply_self),
+            "seen": bool(row.seen),
+            "reply_to_id": row.reply_to_id,
             "deleted": bool(row.deleted_everyone),
             "deleted_for": deleted_for
         })
@@ -240,3 +270,29 @@ def delete_message_route():
 def online_status():
 
     return jsonify({user: is_online(user) for user in last_active})
+
+
+@messages_bp.route("/typing", methods=["POST"])
+def typing_route():
+
+    if "username" not in session:
+        return "", 403
+
+    chatwith = request.form.get("chatwith")
+
+    if chatwith:
+        set_typing(session["username"], chatwith)
+
+    return "", 204
+
+
+@messages_bp.route("/typing_status")
+def typing_status_route():
+
+    if "username" not in session:
+        return jsonify({"typing": False})
+
+    chatwith = request.args.get("chatwith", "")
+    username = session["username"]
+
+    return jsonify({"typing": is_typing(chatwith, username)})
