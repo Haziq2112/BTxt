@@ -134,6 +134,15 @@ def init_db():
         )
         """))
 
+        conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS message_reactions(
+            message_id TEXT NOT NULL,
+            username TEXT NOT NULL,
+            emoji TEXT NOT NULL,
+            PRIMARY KEY(message_id, username)
+        )
+        """))
+
     # Column migration, checked separately using SQLAlchemy's own
     # inspection instead of "ADD COLUMN IF NOT EXISTS" — that syntax
     # isn't supported by older SQLite builds (e.g. some bundled with
@@ -164,6 +173,14 @@ def init_db():
             conn.execute(text("""
                 ALTER TABLE messages
                 ADD COLUMN reply_to_id TEXT
+            """))
+
+    if "pinned" not in existing_columns:
+
+        with get_conn() as conn:
+            conn.execute(text("""
+                ALTER TABLE messages
+                ADD COLUMN pinned INTEGER DEFAULT 0
             """))
 
     with get_conn() as conn:
@@ -711,7 +728,8 @@ def get_messages(user1, user2):
         result = conn.execute(
             text("""
             SELECT id, sender, receiver, message, timestamp, edited,
-                   reply_text, reply_self, deleted_everyone, deleted_for, seen, reply_to_id
+                   reply_text, reply_self, deleted_everyone, deleted_for,
+                   seen, reply_to_id, pinned
             FROM messages
             WHERE (sender=:u1 AND receiver=:u2)
                OR (sender=:u2 AND receiver=:u1)
@@ -802,6 +820,116 @@ def get_unread_count(viewer, other_user):
         ).fetchone()
 
         return row.count if row else 0
+
+
+def set_reaction(message_id, username, emoji):
+
+    with get_conn() as conn:
+
+        conn.execute(
+            text("""
+            INSERT INTO message_reactions(message_id, username, emoji)
+            VALUES(:message_id, :username, :emoji)
+            ON CONFLICT(message_id, username) DO UPDATE SET emoji=excluded.emoji
+            """),
+            {"message_id": message_id, "username": username, "emoji": emoji}
+        )
+
+
+def remove_reaction(message_id, username):
+
+    with get_conn() as conn:
+
+        conn.execute(
+            text("""
+            DELETE FROM message_reactions
+            WHERE message_id=:message_id AND username=:username
+            """),
+            {"message_id": message_id, "username": username}
+        )
+
+
+def get_reaction(message_id, username):
+
+    with get_conn() as conn:
+
+        row = conn.execute(
+            text("""
+            SELECT emoji FROM message_reactions
+            WHERE message_id=:message_id AND username=:username
+            """),
+            {"message_id": message_id, "username": username}
+        ).fetchone()
+
+        return row.emoji if row else None
+
+
+def get_reactions_for_conversation(user1, user2):
+
+    # One query for the whole conversation instead of one per message —
+    # avoids an N+1 query pattern when a chat has many reacted messages.
+
+    with get_conn() as conn:
+
+        result = conn.execute(
+            text("""
+            SELECT mr.message_id, mr.username, mr.emoji
+            FROM message_reactions mr
+            JOIN messages m ON m.id = mr.message_id
+            WHERE (m.sender=:u1 AND m.receiver=:u2)
+               OR (m.sender=:u2 AND m.receiver=:u1)
+            """),
+            {"u1": user1, "u2": user2}
+        )
+
+        reactions_map = {}
+
+        for row in result:
+            reactions_map.setdefault(row.message_id, []).append({
+                "username": row.username,
+                "emoji": row.emoji
+            })
+
+        return reactions_map
+
+
+def toggle_pin(message_id, pinned):
+
+    with get_conn() as conn:
+
+        result = conn.execute(
+            text("""
+            UPDATE messages
+            SET pinned=:pinned
+            WHERE id=:id
+            """),
+            {"pinned": 1 if pinned else 0, "id": message_id}
+        )
+
+        return result.rowcount > 0
+
+
+def get_pinned_messages(user1, user2):
+
+    with get_conn() as conn:
+
+        result = conn.execute(
+            text("""
+            SELECT id, sender, message
+            FROM messages
+            WHERE pinned=1
+              AND deleted_everyone=0
+              AND ((sender=:u1 AND receiver=:u2) OR (sender=:u2 AND receiver=:u1))
+            ORDER BY
+            CASE
+                WHEN created_at IS NULL THEN timestamp
+                ELSE CAST(created_at AS TEXT)
+            END ASC
+            """),
+            {"u1": user1, "u2": user2}
+        )
+
+        return result.fetchall()
 
 
 def get_last_message(user1, user2):
@@ -1043,4 +1171,3 @@ def username_exists(username):
         )
 
         return result.first() is not None
-

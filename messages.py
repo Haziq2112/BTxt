@@ -13,7 +13,9 @@ from database import (
     get_contacts, add_contact, save_message, username_exists,
     get_messages, edit_message, get_last_message, mark_messages_seen,
     get_unread_count, delete_message_everyone, remove_contact,
-    get_profile_picture, delete_message_for_me
+    get_profile_picture, delete_message_for_me,
+    set_reaction, remove_reaction, get_reaction, get_reactions_for_conversation,
+    toggle_pin, get_pinned_messages
 )
 
 messages_bp = Blueprint("messages", __name__)
@@ -205,6 +207,7 @@ def messages():
     mark_messages_seen(username, chatwith)
 
     rows = get_messages(username, chatwith)
+    reactions_map = get_reactions_for_conversation(username, chatwith)
 
     result = []
 
@@ -223,6 +226,8 @@ def messages():
             "reply_self": bool(row.reply_self),
             "seen": bool(row.seen),
             "reply_to_id": row.reply_to_id,
+            "pinned": bool(row.pinned),
+            "reactions": reactions_map.get(row.id, []),
             "deleted": bool(row.deleted_everyone),
             "deleted_for": deleted_for
         })
@@ -296,3 +301,77 @@ def typing_status_route():
     username = session["username"]
 
     return jsonify({"typing": is_typing(chatwith, username)})
+
+
+@messages_bp.route("/react", methods=["POST"])
+def react_route():
+
+    if "username" not in session:
+        return jsonify({"success": False}), 403
+
+    data = request.json
+    username = session["username"]
+    message_id = data.get("message_id")
+    emoji = data.get("emoji")
+
+    if not message_id or not emoji:
+        return jsonify({"success": False}), 400
+
+    # Tapping the same emoji you already reacted with removes it —
+    # a toggle, same as most chat apps. A different emoji replaces
+    # your previous reaction (one reaction per person per message).
+    existing = get_reaction(message_id, username)
+
+    if existing == emoji:
+        remove_reaction(message_id, username)
+        reacted = False
+    else:
+        set_reaction(message_id, username, emoji)
+        reacted = True
+
+    return jsonify({"success": True, "reacted": reacted})
+
+
+@messages_bp.route("/toggle_pin", methods=["POST"])
+def toggle_pin_route():
+
+    if "username" not in session:
+        return jsonify({"success": False}), 403
+
+    data = request.json
+    message_id = data.get("message_id")
+    pin = data.get("pin", True)
+
+    success = toggle_pin(message_id, pin)
+
+    return jsonify({"success": success})
+
+
+@messages_bp.route("/pinned")
+def pinned_route():
+
+    if "username" not in session:
+        return jsonify({"pinned": []})
+
+    username = session["username"]
+    chatwith = request.args.get("chatwith", "")
+
+    rows = get_pinned_messages(username, chatwith)
+
+    return jsonify({
+        "pinned": [
+            {"id": row.id, "sender": row.sender, "text": row.message}
+            for row in rows
+        ]
+    })
+
+
+@messages_bp.route("/contacts_list")
+def contacts_list_route():
+
+    if "username" not in session:
+        return jsonify({"contacts": []})
+
+    contacts = get_contacts(session["username"])
+
+    return jsonify({"contacts": contacts})

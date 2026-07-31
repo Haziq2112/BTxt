@@ -1,7 +1,7 @@
 "use strict";
 
 // =====================================
-// BText V4 — Chat Page Logic
+// BTxt V4 — Chat Page Logic
 // =====================================
 
 // ---------- USER ----------
@@ -27,6 +27,15 @@ let editingMessageId = null;
 let lastServerHash = "";
 let sending = false;
 let loading = false;
+let latestMessages = [];
+
+// Selection mode (copy/delete multiple)
+let selectionMode = false;
+let selectedMessages = new Map();
+
+// Pinned messages
+let pinnedMessagesList = [];
+let currentPinnedIndex = 0;
 
 // ---------- SETTINGS ----------
 const REFRESH_RATE = 700;
@@ -174,22 +183,54 @@ function buildTicks(msg) {
         : `<span class="ticks">✓</span>`;
 }
 
+function buildReactionChips(msg) {
+    if (!msg.reactions || msg.reactions.length === 0) return "";
+
+    // Group by emoji, counting how many people used each one
+    const counts = {};
+    let mine = null;
+
+    msg.reactions.forEach(r => {
+        counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+        if (r.username === username) mine = r.emoji;
+    });
+
+    const chips = Object.entries(counts).map(([emoji, count]) => {
+        const mineClass = emoji === mine ? "mine" : "";
+        return `<span class="reaction-chip ${mineClass}">${emoji} ${count}</span>`;
+    }).join("");
+
+    return `<div class="reaction-chips">${chips}</div>`;
+}
+
 function buildBubble(msg) {
     const bubble = document.createElement("div");
 
     bubble.className = msg.sender === username ? "bubble me" : "bubble other";
     bubble.dataset.id = msg.id;
 
+    if (selectionMode && selectedMessages.has(msg.id)) {
+        bubble.classList.add("selected");
+    }
+
     bubble.innerHTML = `
         ${buildReplyHTML(msg)}
         <div class="message-text">${escapeHTML(msg.text)}</div>
         <div class="msg-time">
+            ${msg.pinned ? '<span class="pin-icon">📌</span>' : ""}
             <span class="time-text">${msg.edited ? "edited • " : ""}${msg.time || ""}</span>
             ${buildTicks(msg)}
         </div>
+        ${buildReactionChips(msg)}
     `;
 
     attachLongPress(bubble, msg);
+
+    if (selectionMode) {
+        bubble.addEventListener("click", function () {
+            toggleSelection(bubble, msg);
+        });
+    }
 
     return bubble;
 }
@@ -264,6 +305,7 @@ async function loadMessages(force = false) {
 
         if (hash !== lastServerHash) {
             lastServerHash = hash;
+            latestMessages = data.messages;
             renderMessages(data.messages);
         }
     } catch (error) {
@@ -277,6 +319,10 @@ async function loadMessages(force = false) {
 // LONG PRESS + MENU
 // =====================================
 
+const SWIPE_THRESHOLD = 55;
+const SWIPE_MAX = 80;
+const MENU_MARGIN = 10;
+
 function showMenu(message, x, y) {
     selectedMessage = message;
 
@@ -286,13 +332,51 @@ function showMenu(message, x, y) {
     document.getElementById("deleteBtn").style.display =
         message.sender === username ? "block" : "none";
 
-    msgMenu.style.display = "flex";
-    msgMenu.style.left = x + "px";
-    msgMenu.style.top = y + "px";
-}
+    document.getElementById("pinBtn").innerText =
+        message.pinned ? "📌 Unpin" : "📌 Pin";
 
-const SWIPE_THRESHOLD = 55;
-const SWIPE_MAX = 80;
+    const customInput = document.getElementById("customEmojiInput");
+    customInput.style.display = "none";
+    customInput.value = "";
+
+    // Measure the menu off-screen first so we know its real size
+    // before deciding where to place it — this is what keeps it
+    // fully inside the viewport no matter where you long-press,
+    // instead of running off the bottom/side of the screen.
+    msgMenu.style.visibility = "hidden";
+    msgMenu.style.display = "flex";
+    msgMenu.style.left = "0px";
+    msgMenu.style.top = "0px";
+
+    const rect = msgMenu.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = x;
+    let top = y;
+
+    if (left + rect.width + MENU_MARGIN > viewportWidth) {
+        left = viewportWidth - rect.width - MENU_MARGIN;
+    }
+    if (left < MENU_MARGIN) {
+        left = MENU_MARGIN;
+    }
+
+    if (top + rect.height + MENU_MARGIN > viewportHeight) {
+        // Not enough room below the touch point — flip it above instead.
+        top = y - rect.height;
+    }
+    if (top < MENU_MARGIN) {
+        top = MENU_MARGIN;
+    }
+    if (top + rect.height + MENU_MARGIN > viewportHeight) {
+        top = viewportHeight - rect.height - MENU_MARGIN;
+    }
+
+    msgMenu.style.left = left + "px";
+    msgMenu.style.top = top + "px";
+    msgMenu.style.visibility = "visible";
+}
 
 function attachLongPress(bubble, message) {
     // Desktop
@@ -479,6 +563,334 @@ async function deleteForMe() {
 }
 
 // =====================================
+// REACTIONS (now inline at the top of msgMenu, no separate popup)
+// =====================================
+
+async function sendReaction(emoji) {
+    if (!selectedMessage) return;
+
+    await fetch("/react", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            message_id: selectedMessage.id,
+            emoji: emoji
+        })
+    });
+
+    closeMenu();
+    loadMessages(true);
+}
+
+function openCustomEmojiPicker() {
+    const input = document.getElementById("customEmojiInput");
+    input.style.display = "block";
+    input.value = "";
+    input.focus();
+}
+
+document.getElementById("customEmojiInput").addEventListener("input", function () {
+    // Typing/picking any character here (via the device's own emoji
+    // keyboard) sends it immediately as the reaction.
+    const emoji = this.value.trim();
+    if (emoji) {
+        sendReaction(emoji);
+    }
+});
+
+// Prevent a tap inside the menu (e.g. on the custom emoji input)
+// from bubbling up to the document click listener and closing the
+// menu before the user's done with it.
+msgMenu.addEventListener("click", function (e) {
+    e.stopPropagation();
+});
+
+// =====================================
+// PIN MESSAGES
+// =====================================
+
+async function togglePinSelected() {
+    if (!selectedMessage) return;
+
+    const newState = !selectedMessage.pinned;
+
+    await fetch("/toggle_pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            message_id: selectedMessage.id,
+            pin: newState
+        })
+    });
+
+    closeMenu();
+    loadMessages(true);
+    fetchPinnedMessages();
+}
+
+async function fetchPinnedMessages() {
+    try {
+        const response = await fetch(
+            `/pinned?chatwith=${encodeURIComponent(chatWith)}`,
+            { cache: "no-store" }
+        );
+
+        const data = await response.json();
+        pinnedMessagesList = data.pinned || [];
+
+        const bar = document.getElementById("pinnedBar");
+        const text = document.getElementById("pinnedText");
+
+        if (pinnedMessagesList.length === 0) {
+            bar.classList.remove("show");
+            return;
+        }
+
+        const latest = pinnedMessagesList[pinnedMessagesList.length - 1];
+        const countSuffix = pinnedMessagesList.length > 1
+            ? ` (+${pinnedMessagesList.length - 1} more)`
+            : "";
+
+        text.textContent = latest.text + countSuffix;
+        bar.classList.add("show");
+
+    } catch (error) {
+        console.log("Failed to load pinned messages:", error);
+    }
+}
+
+function jumpToPinned() {
+    if (pinnedMessagesList.length === 0) return;
+
+    const target = pinnedMessagesList[currentPinnedIndex];
+    jumpToMessage(target.id);
+
+    currentPinnedIndex = (currentPinnedIndex + 1) % pinnedMessagesList.length;
+}
+
+// =====================================
+// FORWARD
+// =====================================
+
+async function openForwardPicker() {
+    closeMenu();
+
+    const listEl = document.getElementById("forwardContactsList");
+    listEl.innerHTML = "Loading...";
+
+    document.getElementById("forwardPicker").classList.add("show");
+
+    try {
+        const response = await fetch("/contacts_list", { cache: "no-store" });
+        const data = await response.json();
+
+        if (!data.contacts || data.contacts.length === 0) {
+            listEl.innerHTML = "<p style='color:var(--slate);'>No contacts to forward to.</p>";
+            return;
+        }
+
+        listEl.innerHTML = "";
+
+        data.contacts.forEach(contact => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = contact;
+            btn.onclick = function () {
+                forwardToContact(contact);
+            };
+            listEl.appendChild(btn);
+        });
+
+    } catch (error) {
+        listEl.innerHTML = "<p style='color:var(--coral);'>Failed to load contacts.</p>";
+    }
+}
+
+function closeForwardPicker() {
+    document.getElementById("forwardPicker").classList.remove("show");
+}
+
+async function forwardToContact(contact) {
+    if (!selectedMessage) return;
+
+    const formData = new FormData();
+    formData.append("username", username);
+    formData.append("chatwith", contact);
+    formData.append("message", selectedMessage.text);
+
+    await fetch("/send", {
+        method: "POST",
+        body: formData
+    });
+
+    closeForwardPicker();
+
+    if (contact === chatWith) {
+        loadMessages(true);
+    }
+}
+
+document.getElementById("forwardPicker").addEventListener("click", function (e) {
+    if (e.target === this) closeForwardPicker();
+});
+
+// =====================================
+// SELECTION MODE (copy / delete multiple)
+// =====================================
+
+function startSelectionMode() {
+    closeMenu();
+    selectionMode = true;
+    selectedMessages.clear();
+
+    // Selection mode replaces search — close it if it was open.
+    closeSearch();
+
+    document.getElementById("selectionHeader").classList.add("show");
+    updateSelectionCount();
+
+    if (selectedMessage) {
+        const bubble = document.querySelector(`.bubble[data-id="${selectedMessage.id}"]`);
+        if (bubble) toggleSelection(bubble, selectedMessage);
+    }
+
+    // Re-render so every bubble picks up the selection click handler
+    renderMessages(latestMessages);
+}
+
+function toggleSelection(bubble, msg) {
+    if (!selectionMode) return;
+
+    if (selectedMessages.has(msg.id)) {
+        selectedMessages.delete(msg.id);
+        bubble.classList.remove("selected");
+    } else {
+        selectedMessages.set(msg.id, msg.text);
+        bubble.classList.add("selected");
+    }
+
+    updateSelectionCount();
+}
+
+function updateSelectionCount() {
+    document.getElementById("selectionCount").textContent =
+        `${selectedMessages.size} selected`;
+}
+
+function cancelSelection() {
+    selectionMode = false;
+    selectedMessages.clear();
+    document.getElementById("selectionHeader").classList.remove("show");
+    document.querySelectorAll(".bubble.selected").forEach(b => b.classList.remove("selected"));
+    renderMessages(latestMessages);
+}
+
+function copySelectedMessages() {
+    if (selectedMessages.size === 0) return;
+
+    // Preserve chat order, not selection order
+    const orderedText = latestMessages
+        .filter(msg => selectedMessages.has(msg.id))
+        .map(msg => msg.text)
+        .join("\n");
+
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(orderedText);
+    } else {
+        const temp = document.createElement("textarea");
+        temp.value = orderedText;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        document.body.removeChild(temp);
+    }
+
+    cancelSelection();
+}
+
+async function deleteSelectedMessages() {
+    if (selectedMessages.size === 0) return;
+
+    const count = selectedMessages.size;
+
+    if (!confirm(`Delete ${count} message${count > 1 ? "s" : ""} for you?`)) {
+        return;
+    }
+
+    const ids = Array.from(selectedMessages.keys());
+
+    // Deletes for you specifically (same as "Delete For Me" on a
+    // single message) — safe default for a bulk action that might
+    // include messages you didn't send.
+    await Promise.all(ids.map(id =>
+        fetch("/delete_message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                username: username,
+                message_id: id,
+                mode: "me"
+            })
+        })
+    ));
+
+    cancelSelection();
+    loadMessages(true);
+}
+
+// =====================================
+// SEARCH IN CHAT
+// =====================================
+
+function toggleSearch() {
+    if (selectionMode) return;
+
+    const bar = document.getElementById("searchBar");
+    const isShowing = bar.classList.toggle("show");
+
+    if (isShowing) {
+        document.getElementById("searchInput").focus();
+    } else {
+        closeSearch();
+    }
+}
+
+function closeSearch() {
+    document.getElementById("searchBar").classList.remove("show");
+    document.getElementById("searchInput").value = "";
+
+    document.querySelectorAll(".bubble").forEach(b => {
+        b.classList.remove("search-hidden", "search-match");
+    });
+}
+
+function performSearch() {
+    const query = document.getElementById("searchInput").value.trim().toLowerCase();
+    const bubbles = document.querySelectorAll(".bubble");
+
+    if (query === "") {
+        bubbles.forEach(b => b.classList.remove("search-hidden", "search-match"));
+        return;
+    }
+
+    let firstMatch = null;
+
+    bubbles.forEach(bubble => {
+        const textEl = bubble.querySelector(".message-text");
+        const matches = textEl && textEl.textContent.toLowerCase().includes(query);
+
+        bubble.classList.toggle("search-hidden", !matches);
+        bubble.classList.toggle("search-match", matches);
+
+        if (matches && !firstMatch) firstMatch = bubble;
+    });
+
+    if (firstMatch) {
+        firstMatch.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+}
+
+// =====================================
 // SEND + STARTUP
 // =====================================
 
@@ -596,6 +1008,7 @@ window.addEventListener("load", function () {
     loadMessages(true);
     scrollToBottom();
     startSync();
+    fetchPinnedMessages();
 });
 
 // Some mobile browsers restore previously-typed (but never sent) form
