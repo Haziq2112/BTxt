@@ -18,7 +18,7 @@ from sqlalchemy import create_engine, text, inspect
 from werkzeug.security import generate_password_hash
 
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///btxt.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///btext.db")
 
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -59,7 +59,7 @@ def init_db():
             password TEXT NOT NULL,
             bio TEXT DEFAULT 'No bio yet.',
             profile_picture TEXT DEFAULT '',
-            btxt_id TEXT UNIQUE,
+            btext_id TEXT UNIQUE,
             joined_date TEXT,
             phone TEXT DEFAULT ''
         )
@@ -71,7 +71,7 @@ def init_db():
             password TEXT NOT NULL,
             bio TEXT DEFAULT 'No bio yet.',
             profile_picture TEXT DEFAULT '',
-            btxt_id TEXT,
+            btext_id TEXT,
             joined_date TEXT,
             phone TEXT DEFAULT '',
             deleted_by TEXT DEFAULT 'admin'
@@ -191,7 +191,7 @@ def init_db():
         """))
 
 
-def generate_btxt_id():
+def generate_btext_id():
 
     letters = string.ascii_uppercase
     digits = string.digits
@@ -216,7 +216,7 @@ def generate_btxt_id():
 
         new_id = "BTX-" + "".join(code)
 
-        if not get_user_by_btxt_id(new_id):
+        if not get_user_by_btext_id(new_id):
             return new_id
 
 
@@ -224,13 +224,13 @@ def generate_btxt_id():
 # USERS
 # ============================================================
 
-def get_user_by_btxt_id(btxt_id):
+def get_user_by_btext_id(btext_id):
 
     with get_conn() as conn:
 
         row = conn.execute(
-            text("SELECT username FROM users WHERE btxt_id=:id"),
-            {"id": btxt_id}
+            text("SELECT username FROM users WHERE btext_id=:id"),
+            {"id": btext_id}
         ).fetchone()
 
         return row
@@ -289,7 +289,7 @@ def get_user(username):
             text("""
             SELECT
                 password, bio, profile_picture,
-                btxt_id, joined_date, phone
+                btext_id, joined_date, phone
             FROM users
             WHERE username=:username
             """),
@@ -302,7 +302,7 @@ def get_user(username):
 def add_user(username, password):
 
     hashed = generate_password_hash(password)
-    btxt_id = generate_btxt_id()
+    btext_id = generate_btext_id()
     joined = datetime.now().strftime("%d %B %Y")
 
     with get_conn() as conn:
@@ -311,7 +311,7 @@ def add_user(username, password):
             text("""
             INSERT INTO users
                 (username, password, bio, profile_picture,
-                 btxt_id, joined_date, phone)
+                 btext_id, joined_date, phone)
             VALUES
                 (:username, :password, :bio, :picture,
                  :id, :joined, :phone)
@@ -321,7 +321,7 @@ def add_user(username, password):
                 "password": hashed,
                 "bio": "No bio yet.",
                 "picture": "",
-                "id": btxt_id,
+                "id": btext_id,
                 "joined": joined,
                 "phone": ""
             }
@@ -374,17 +374,17 @@ def add_deleted_user(username, deleted_by="admin"):
             text("""
             INSERT INTO deleted_users
                 (username, password, bio, profile_picture,
-                 btxt_id, joined_date, phone, deleted_by)
+                 btext_id, joined_date, phone, deleted_by)
             VALUES
                 (:username, :password, :bio, :profile_picture,
-                 :btxt_id, :joined_date, :phone, :deleted_by)
+                 :btext_id, :joined_date, :phone, :deleted_by)
             """),
             {
                 "username": username,
                 "password": user.password,
                 "bio": user.bio,
                 "profile_picture": user.profile_picture,
-                "btxt_id": user.btxt_id,
+                "btext_id": user.btext_id,
                 "joined_date": user.joined_date,
                 "phone": user.phone,
                 "deleted_by": deleted_by
@@ -412,7 +412,7 @@ def restore_user(username):
         row = conn.execute(
             text("""
             SELECT username, password, bio, profile_picture,
-                   btxt_id, joined_date, phone
+                   btext_id, joined_date, phone
             FROM deleted_users
             WHERE username=:username
             """),
@@ -426,17 +426,17 @@ def restore_user(username):
             text("""
             INSERT INTO users
                 (username, password, bio, profile_picture,
-                 btxt_id, joined_date, phone)
+                 btext_id, joined_date, phone)
             VALUES
                 (:username, :password, :bio, :profile_picture,
-                 :btxt_id, :joined_date, :phone)
+                 :btext_id, :joined_date, :phone)
             """),
             {
                 "username": row.username,
                 "password": row.password,
                 "bio": row.bio,
                 "profile_picture": row.profile_picture,
-                "btxt_id": row.btxt_id,
+                "btext_id": row.btext_id,
                 "joined_date": row.joined_date,
                 "phone": row.phone
             }
@@ -967,7 +967,7 @@ def get_profile(username):
         row = conn.execute(
             text("""
             SELECT username, bio, profile_picture,
-                   btxt_id, joined_date, phone
+                   btext_id, joined_date, phone
             FROM users
             WHERE username=:username
             """),
@@ -1146,7 +1146,7 @@ def get_all_profiles():
         result = conn.execute(
             text("""
             SELECT username, bio, profile_picture,
-                   btxt_id, joined_date, phone
+                   btext_id, joined_date, phone
             FROM users
             ORDER BY username
             """)
