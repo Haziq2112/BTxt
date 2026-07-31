@@ -54,7 +54,7 @@ def profile():
         username=data.username,
         bio=data.bio,
         profile_picture=data.profile_picture,
-        btext_id=data.btext_id,
+        btxt_id=data.btxt_id,
         joined_date=data.joined_date,
         phone=data.phone
     ))
