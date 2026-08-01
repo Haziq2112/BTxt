@@ -293,6 +293,72 @@ a{
     font-size:14px;
 }
 
+
+.install-popup{
+    position:fixed;
+    left:15px;
+    right:15px;
+    bottom:-150px;
+
+    display:flex;
+    align-items:center;
+    gap:14px;
+
+    background:#15191d;
+    border:1px solid #252b31;
+    border-radius:18px;
+
+    padding:14px;
+
+    transition:.35s ease;
+
+    z-index:99999;
+
+    box-shadow:0 15px 35px rgba(0,0,0,.45);
+}
+
+.install-popup.show{
+    bottom:20px;
+}
+
+.install-logo{
+    width:54px;
+    height:54px;
+    border-radius:14px;
+}
+
+.install-info{
+    flex:1;
+}
+
+.install-title{
+    color:white;
+    font-weight:700;
+    font-size:17px;
+}
+
+.install-subtitle{
+    color:#9aa3aa;
+    font-size:13px;
+    margin-top:2px;
+}
+
+#installBtn{
+    background:#00e676;
+    color:#000;
+
+    border:none;
+
+    padding:11px 18px;
+
+    border-radius:12px;
+
+    font-weight:700;
+
+    cursor:pointer;
+}
+
+
 </style>
 </head>
 
@@ -384,16 +450,55 @@ a{
     </div>
 
 </div>
-
 {% else %}
-
 <div class="empty">No chats yet — add a username above to start one.</div>
-
 {% endfor %}
-
 </div>
 
+
+<div id="installPopup" class="install-popup">
+    <img src="/static/icons/icon-192.png" class="install-logo">
+
+    <div class="install-info">
+        <div class="install-title">Install BTxt</div>
+        <div class="install-subtitle">
+            Faster • Full Screen • Native Experience
+        </div>
+    </div>
+
+    <button id="installBtn">Install</button>
+</div>
+
+
 <script src="/static/js/chats.js"></script>
+
+
+<script>
+let deferredPrompt = null;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    document.getElementById("installPopup").style.display = "flex";
+});
+
+async function installBTxt() {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+
+    const { outcome } = await deferredPrompt.userChoice;
+
+    deferredPrompt = null;
+
+    document.getElementById("installPopup").style.display = "none";
+}
+
+function closeInstallPopup() {
+    document.getElementById("installPopup").style.display = "none";
+}
+</script>
 
 </body>
 </html>

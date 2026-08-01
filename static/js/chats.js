@@ -27,3 +27,30 @@ document.addEventListener("click",function(e){
     }
 
 });
+
+
+let deferredPrompt;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+
+    e.preventDefault();
+
+    deferredPrompt = e;
+
+    document.getElementById("installPopup").classList.add("show");
+
+});
+
+document.getElementById("installBtn").onclick = async () => {
+
+    if(!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+
+    await deferredPrompt.userChoice;
+
+    document.getElementById("installPopup").classList.remove("show");
+
+    deferredPrompt = null;
+
+};
