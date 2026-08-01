@@ -466,39 +466,9 @@ a{
         </div>
     </div>
 
-    <button id="installBtn">Install</button>
-</div>
-
+<button id="installBtn" onclick="installBTxt()">Install</button>
 
 <script src="/static/js/chats.js"></script>
-
-
-<script>
-let deferredPrompt = null;
-
-window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-
-    document.getElementById("installPopup").style.display = "flex";
-});
-
-async function installBTxt() {
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-
-    const { outcome } = await deferredPrompt.userChoice;
-
-    deferredPrompt = null;
-
-    document.getElementById("installPopup").style.display = "none";
-}
-
-function closeInstallPopup() {
-    document.getElementById("installPopup").style.display = "none";
-}
-</script>
 
 </body>
 </html>
