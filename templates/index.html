@@ -406,9 +406,6 @@ MESSAGE BUBBLES
     position:relative;
     touch-action:pan-y;
     transition:transform .2s ease;
-git add .
-git commit -m "Describe your update"
-git push origin main
     --swipe-progress:0;
 }
 
@@ -914,7 +911,8 @@ class="send-btn">
     <button type="button" onclick="sendReaction('😂')">😂</button>
     <button type="button" onclick="sendReaction('😭')">😭</button>
     <button type="button" onclick="sendReaction('👨🏻‍🦯')">👨🏻‍🦯</button>
-    <button type="button" class="add-emoji-btn" onclick="openCustomEmojiPicker()">+</button>
+    <button type="button" class="add-emoji-btn" onclick="openCustomEmojiPicker()">>
+
 </div>
 
 <input type="text" id="customEmojiInput" placeholder="Pick an emoji from your keyboard">
@@ -1003,3 +1001,4 @@ const chatWithValue = "{{ chatwith }}";
 
 </body>
 </html>
+
