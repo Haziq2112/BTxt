@@ -15,23 +15,62 @@ from database import (
     get_unread_count, delete_message_everyone, remove_contact,
     get_profile_picture, delete_message_for_me,
     set_reaction, remove_reaction, get_reaction, get_reactions_for_conversation,
-    toggle_pin, get_pinned_messages
+    toggle_pin, get_pinned_messages, get_user_by_btext_id,
+    update_last_seen, get_privacy_settings
 )
 
 messages_bp = Blueprint("messages", __name__)
 
 last_active = {}
 
+# Throttles how often we write last_seen to the database — writing on
+# every single 700ms poll would be excessive; once every ~20s while
+# someone's active is plenty for a "last seen" feature to feel accurate.
+last_persisted_seen = {}
+PERSIST_INTERVAL = 20
+
 
 def update_activity(username):
-    if username:
-        last_active[username] = time.time()
+
+    if not username:
+        return
+
+    last_active[username] = time.time()
+
+    now = time.time()
+    last_persisted = last_persisted_seen.get(username, 0)
+
+    if now - last_persisted > PERSIST_INTERVAL:
+        last_persisted_seen[username] = now
+        formatted = datetime.now(IST).strftime("%d %b, %I:%M %p")
+        update_last_seen(username, formatted)
 
 
 def is_online(username):
     if username not in last_active:
         return False
     return time.time() - last_active[username] < 5
+
+
+def is_online_visible(username):
+    # Respects that user's own privacy setting — if they've hidden
+    # their online status, everyone sees them as offline regardless
+    # of whether they're actually active right now.
+    settings = get_privacy_settings(username)
+
+    if settings and not settings.show_online:
+        return False
+
+    return is_online(username)
+
+
+def get_visible_last_seen(username):
+    settings = get_privacy_settings(username)
+
+    if not settings or not settings.show_last_seen:
+        return None
+
+    return settings.last_seen or None
 
 
 # Typing status is transient — no reason to persist it in the
@@ -117,7 +156,8 @@ def chat(chatwith):
         "index.html",
         username=username,
         chatwith=chatwith,
-        is_online=is_online,
+        is_online=is_online_visible,
+        last_seen=get_visible_last_seen(chatwith),
         profile_picture=get_profile_picture(chatwith)
     ))
 
@@ -131,12 +171,21 @@ def add_user_route():
         return redirect("/login")
 
     current_user = session["username"]
-    new_user = request.form.get("newuser", "").strip().lower()
+    raw_input = request.form.get("newuser", "").strip()
+
+    # Accept either a plain username or a BTxt ID (format BTX-XXXXXX)
+    # so people can add each other without needing to know the exact
+    # username spelling/case.
+    if raw_input.upper().startswith("BTX-"):
+        match = get_user_by_btext_id(raw_input.upper())
+        new_user = match.username if match else None
+    else:
+        new_user = raw_input.lower()
 
     contacts = get_contacts(current_user)
 
-    if not username_exists(new_user):
-        flash("Username not found")
+    if not new_user or not username_exists(new_user):
+        flash("User not found")
         return redirect("/chats")
 
     if new_user == current_user:
@@ -274,7 +323,7 @@ def delete_message_route():
 @messages_bp.route("/online_status")
 def online_status():
 
-    return jsonify({user: is_online(user) for user in last_active})
+    return jsonify({user: is_online_visible(user) for user in last_active})
 
 
 @messages_bp.route("/typing", methods=["POST"])

@@ -7,7 +7,7 @@ from database import (
     get_profile, update_profile, update_profile_picture,
     get_user, change_password, remove_profile_picture,
     add_deleted_user, delete_user,
-    username_exists, get_privacy_settings, update_privacy_settings
+    username_exists
 )
 
 profile_bp = Blueprint("profile", __name__)
@@ -54,7 +54,7 @@ def profile():
         username=data.username,
         bio=data.bio,
         profile_picture=data.profile_picture,
-        btext_id=data.btext_id,
+        btxt_id=data.btxt_id,
         joined_date=data.joined_date,
         phone=data.phone
     ))
@@ -165,33 +165,15 @@ def settings():
     return no_cache(response)
 
 
-@profile_bp.route("/privacy", methods=["GET", "POST"])
+@profile_bp.route("/privacy")
 def privacy():
 
     if not logged_in():
         return redirect("/login")
 
-    username = session["username"]
-
-    if request.method == "POST":
-
-        show_online = request.form.get("show_online") == "on"
-        show_last_seen = request.form.get("show_last_seen") == "on"
-
-        update_privacy_settings(username, show_online, show_last_seen)
-
-        flash("Privacy settings updated.")
-
-        return redirect("/privacy")
-
-    settings_row = get_privacy_settings(username)
-
-    response = make_response(render_template(
-        "privacy.html",
-        username=username,
-        show_online=bool(settings_row.show_online) if settings_row else True,
-        show_last_seen=bool(settings_row.show_last_seen) if settings_row else True
-    ))
+    response = make_response(
+        render_template("privacy.html", username=session["username"])
+    )
 
     return no_cache(response)
 

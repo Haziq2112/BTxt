@@ -17,7 +17,6 @@ import uuid
 from sqlalchemy import create_engine, text, inspect
 from werkzeug.security import generate_password_hash
 
-
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///btext.db")
 
 if DATABASE_URL.startswith("postgres://"):
@@ -189,6 +188,34 @@ def init_db():
             SET created_at = CURRENT_TIMESTAMP
             WHERE created_at IS NULL
         """))
+
+    # Users table migrations — last seen tracking + privacy toggles
+
+    user_columns = [col["name"] for col in inspector.get_columns("users")]
+
+    if "last_seen" not in user_columns:
+
+        with get_conn() as conn:
+            conn.execute(text("""
+                ALTER TABLE users
+                ADD COLUMN last_seen TEXT DEFAULT ''
+            """))
+
+    if "show_online" not in user_columns:
+
+        with get_conn() as conn:
+            conn.execute(text("""
+                ALTER TABLE users
+                ADD COLUMN show_online INTEGER DEFAULT 1
+            """))
+
+    if "show_last_seen" not in user_columns:
+
+        with get_conn() as conn:
+            conn.execute(text("""
+                ALTER TABLE users
+                ADD COLUMN show_last_seen INTEGER DEFAULT 1
+            """))
 
 
 def generate_btext_id():
@@ -703,7 +730,6 @@ def save_message(sender, receiver, message, timestamp, reply_text="", reply_self
 
 
 def mark_messages_seen(viewer, other_user):
-
     # Called whenever `viewer` loads/polls messages in a chat with
     # `other_user` — marks every message THAT PERSON sent them as
     # seen, since fetching it in this specific chat means they're
@@ -865,7 +891,6 @@ def get_reaction(message_id, username):
 
 
 def get_reactions_for_conversation(user1, user2):
-
     # One query for the whole conversation instead of one per message —
     # avoids an N+1 query pattern when a chat has many reacted messages.
 
@@ -935,7 +960,6 @@ def get_pinned_messages(user1, user2):
 def get_last_message(user1, user2):
 
     messages = get_messages(user1, user2)
-
     # Walk backward from the most recent message, skipping anything
     # that's been deleted — either for everyone, or "deleted for me"
     # specifically for user1 (the person whose chat list we're
@@ -1112,7 +1136,6 @@ def update_profile(old_username, new_username, bio):
 
 
 def update_profile_picture(username, picture_data_url):
-
     # picture_data_url is a full data: URL (e.g. "data:image/png;base64,....")
     # stored directly in the database — no filesystem involved, so it
     # survives Render restarts as long as Postgres is connected.
@@ -1171,3 +1194,52 @@ def username_exists(username):
         )
 
         return result.first() is not None
+
+
+# ============================================================
+# PRIVACY + LAST SEEN
+# ============================================================
+
+def update_last_seen(username, formatted_timestamp):
+
+    with get_conn() as conn:
+
+        conn.execute(
+            text("UPDATE users SET last_seen=:ts WHERE username=:username"),
+            {"ts": formatted_timestamp, "username": username}
+        )
+
+
+def get_privacy_settings(username):
+
+    with get_conn() as conn:
+
+        row = conn.execute(
+            text("""
+            SELECT show_online, show_last_seen, last_seen
+            FROM users
+            WHERE username=:username
+            """),
+            {"username": username}
+        ).fetchone()
+
+        return row
+
+
+def update_privacy_settings(username, show_online, show_last_seen):
+
+    with get_conn() as conn:
+
+        conn.execute(
+            text("""
+            UPDATE users
+            SET show_online=:show_online, show_last_seen=:show_last_seen
+            WHERE username=:username
+            """),
+            {
+                "show_online": 1 if show_online else 0,
+                "show_last_seen": 1 if show_last_seen else 0,
+                "username": username
+            }
+        )
+

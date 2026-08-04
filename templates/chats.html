@@ -11,6 +11,10 @@
 
 <title>BTxt Chats</title>
 
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#0A0E0F">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -177,6 +181,12 @@ a{
     cursor:pointer;
 }
 
+.add-hint{
+    padding:6px 20px 0;
+    font-size:12px;
+    color:var(--slate);
+}
+
 /* ---------- FLASH ---------- */
 
 .flash{
@@ -293,71 +303,83 @@ a{
     font-size:14px;
 }
 
+/* ---------- INSTALL PROMPT ---------- */
 
-.install-popup{
+.install-overlay{
+    display:none;
     position:fixed;
-    left:15px;
-    right:15px;
-    bottom:-150px;
-
-    display:flex;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,.65);
+    z-index:9999;
+    justify-content:center;
     align-items:center;
-    gap:14px;
+    padding:20px;
+}
 
-    background:#15191d;
-    border:1px solid #252b31;
+.install-overlay.show{
+    display:flex;
+}
+
+.install-card{
+    background:var(--panel);
+    border:1px solid #262B2E;
+    border-radius:20px;
+    padding:28px 24px;
+    width:100%;
+    max-width:320px;
+    text-align:center;
+}
+
+.install-icon{
+    width:64px;
+    height:64px;
     border-radius:18px;
-
-    padding:14px;
-
-    transition:.35s ease;
-
-    z-index:99999;
-
-    box-shadow:0 15px 35px rgba(0,0,0,.45);
-}
-
-.install-popup.show{
-    bottom:20px;
-}
-
-.install-logo{
-    width:54px;
-    height:54px;
-    border-radius:14px;
-}
-
-.install-info{
-    flex:1;
+    margin:0 auto 16px;
+    display:block;
 }
 
 .install-title{
-    color:white;
+    font-family:'Space Grotesk',sans-serif;
     font-weight:700;
-    font-size:17px;
+    font-size:19px;
 }
 
-.install-subtitle{
-    color:#9aa3aa;
-    font-size:13px;
-    margin-top:2px;
+.install-text{
+    color:var(--slate);
+    font-size:14px;
+    margin-top:8px;
+    line-height:1.5;
 }
 
-#installBtn{
-    background:#00e676;
-    color:#000;
+.install-buttons{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-top:22px;
+}
 
-    border:none;
-
-    padding:11px 18px;
-
+.install-buttons button{
+    padding:14px;
     border-radius:12px;
-
-    font-weight:700;
-
+    font-size:15px;
+    font-weight:600;
     cursor:pointer;
+    border:none;
+    font-family:'Inter',sans-serif;
 }
 
+.install-primary{
+    background:var(--signal);
+    color:var(--void);
+}
+
+.install-secondary{
+    background:transparent;
+    color:var(--slate);
+}
 
 </style>
 </head>
@@ -397,10 +419,11 @@ a{
 
 <div class="add-row">
     <form method="POST" action="/add_user">
-        <input type="text" name="newuser" placeholder="Add a username">
+        <input type="text" name="newuser" placeholder="Username or BTX-ID">
         <button type="submit">Add</button>
     </form>
 </div>
+<div class="add-hint">You can add someone by their username or their BTxt ID (e.g. BTX-4A2B7C)</div>
 
 {% with messages = get_flashed_messages() %}
     {% if messages %}
@@ -450,25 +473,74 @@ a{
     </div>
 
 </div>
+
 {% else %}
+
 <div class="empty">No chats yet — add a username above to start one.</div>
+
 {% endfor %}
+
 </div>
 
-
-<div id="installPopup" class="install-popup">
-    <img src="/static/icons/icon-192.png" class="install-logo">
-
-    <div class="install-info">
+<!-- INSTALL PROMPT -->
+<div id="installOverlay" class="install-overlay">
+    <div class="install-card">
+        <img src="/static/icons/icon-192.png" class="install-icon">
         <div class="install-title">Install BTxt</div>
-        <div class="install-subtitle">
-            Faster • Full Screen • Native Experience
+        <div class="install-text">Add BTxt to your home screen for quicker access and a full-screen app feel.</div>
+        <div class="install-buttons">
+            <button type="button" class="install-primary" onclick="confirmInstall()">Install</button>
+            <button type="button" class="install-secondary" onclick="dismissInstall()">Not now</button>
         </div>
     </div>
-
-<button id="installBtn" onclick="installBTxt()">Install</button>
+</div>
 
 <script src="/static/js/chats.js"></script>
+
+<script>
+
+// ---------- PWA SETUP ----------
+
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/static/sw.js").catch(function (err) {
+        console.log("Service worker registration failed:", err);
+    });
+}
+
+let deferredInstallPrompt = null;
+
+window.addEventListener("beforeinstallprompt", function (event) {
+    // Stop the browser's default mini-infobar — we show our own
+    // matching popup instead, and only once per person (not every
+    // single time they land on this page).
+    event.preventDefault();
+    deferredInstallPrompt = event;
+
+    const alreadyDismissed = localStorage.getItem("btxt_install_dismissed");
+    const alreadyInstalled = window.matchMedia("(display-mode: standalone)").matches;
+
+    if (!alreadyDismissed && !alreadyInstalled) {
+        document.getElementById("installOverlay").classList.add("show");
+    }
+});
+
+function confirmInstall() {
+    document.getElementById("installOverlay").classList.remove("show");
+
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt = null;
+    }
+
+    localStorage.setItem("btxt_install_dismissed", "true");
+}
+
+function dismissInstall() {
+    document.getElementById("installOverlay").classList.remove("show");
+    localStorage.setItem("btxt_install_dismissed", "true");
+}
+
+</script>
 
 </body>
 </html>

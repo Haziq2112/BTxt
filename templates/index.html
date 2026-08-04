@@ -818,6 +818,8 @@ EDIT MODAL
 
 {% if is_online(chatwith) %}
 Online
+{% elif last_seen %}
+Last seen {{ last_seen }}
 {% else %}
 Offline
 {% endif %}

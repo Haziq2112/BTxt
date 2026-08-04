@@ -1,25 +1,189 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-<title>About BText</title>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+<title>About BTxt</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+    --void:#0A0E0F;
+    --panel:#14181A;
+    --panel-2:#1B2023;
+    --signal:#00E676;
+    --signal-dim:#00E67633;
+    --paper:#F5F7F6;
+    --slate:#8A9296;
+}
+
+*{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+    margin:0;
+    padding:0;
+}
+
+body{
+    background:var(--void);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:calc(env(safe-area-inset-top) + 60px) 24px calc(env(safe-area-inset-bottom) + 40px);
+    text-align:center;
+}
+
+a{
+    text-decoration:none;
+    color:inherit;
+}
+
+.mark{
+    width:64px;
+    height:64px;
+    border-radius:20px;
+    background:var(--signal);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:30px;
+    color:var(--void);
+    box-shadow:0 0 40px var(--signal-dim);
+    margin-bottom:18px;
+}
+
+.wordmark{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:26px;
+}
+
+.wordmark span{
+    color:var(--signal);
+}
+
+.version{
+    color:var(--slate);
+    font-size:14px;
+    margin-top:6px;
+}
+
+.card{
+    background:var(--panel);
+    border:1px solid #1D2225;
+    border-radius:16px;
+    padding:20px;
+    margin-top:32px;
+    width:100%;
+    max-width:340px;
+    text-align:left;
+}
+
+.card-row{
+    padding:12px 0;
+    border-bottom:1px solid #1D2225;
+}
+
+.card-row:last-child{
+    border-bottom:none;
+}
+
+.card-label{
+    font-size:12px;
+    color:var(--slate);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+
+.card-value{
+    margin-top:4px;
+    font-size:15px;
+}
+
+.tagline{
+    color:var(--slate);
+    font-size:14px;
+    margin-top:24px;
+    line-height:1.6;
+    max-width:300px;
+}
+
+.back-wrap{
+    margin-top:auto;
+    padding-top:40px;
+    width:100%;
+    max-width:340px;
+}
+
+.back{
+    width:100%;
+    display:block;
+    text-align:center;
+    padding:16px;
+    border-radius:14px;
+    background:var(--panel);
+    border:1.5px solid #262B2E;
+    color:var(--paper);
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.back:active{
+    background:var(--panel-2);
+}
+
+</style>
 </head>
 
-<body style="background:#121212;color:white;font-family:Arial;">
+<body>
 
-<h1>BText</h1>
+<div class="mark">B</div>
 
-<p>Version 1.5</p>
+<div class="wordmark">B<span>Txt</span></div>
+<div class="version">Version 1.5</div>
 
-<p>Developed by Hazii ❤️</p>
+<div class="card">
 
-<p>Private messaging application.</p>
+    <div class="card-row">
+        <div class="card-label">Developed by</div>
+        <div class="card-value">Hazii ❤️</div>
+    </div>
 
-<br>
+    <div class="card-row">
+        <div class="card-label">What it is</div>
+        <div class="card-value">A private messaging app</div>
+    </div>
 
-<a href="/settings">
-<button>← Back</button>
-</a>
+</div>
+
+<div class="tagline">
+    Built from scratch, one feature at a time.
+</div>
+
+<div class="back-wrap">
+    <a href="/settings">
+        <button class="back">← Back</button>
+    </a>
+</div>
 
 </body>
 </html>
